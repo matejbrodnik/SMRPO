@@ -6,7 +6,7 @@ import Project from './Project.vue';
 import User from './User.vue';
 import StoryWall from './StoryWall.vue';
 import Sprint from './Sprint.vue';
-
+import ProductBacklog from './ProductBacklog.vue';
 
 defineProps<{ msg: string }>();
 
@@ -48,6 +48,11 @@ console.log('user role', userRole.value);
             @click="selected = StoryWall"
             prepend-icon="mdi-pencil">
             <v-list-title>User stories (temporary)</v-list-title>
+          </v-list-item>
+          <v-list-item
+            @click="selected = ProductBacklog"
+            prepend-icon="mdi-pencil">
+            <v-list-title>Product backlog</v-list-title>
           </v-list-item>
           <v-list-item
             @click="selected = Sprint"
