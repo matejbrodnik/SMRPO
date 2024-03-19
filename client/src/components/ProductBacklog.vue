@@ -22,7 +22,7 @@
         <p>Description: {{ selectedProject.description }}</p>
         <!-- Add more project details here -->
         <v-card>
-          <component :is="StoryWall" />
+          <component :is="StoryWall" :selectedProject="selectedProject"/>
         </v-card>
       </div>
     
