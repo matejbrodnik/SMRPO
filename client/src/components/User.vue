@@ -2,7 +2,6 @@
   <div style= "height: 100vh; overflow: hidden;">
     <div style="width: 80%; margin: 30px auto">
       <v-btn @click="
-        $refs.dlgNewUser.edit = false;
       $refs.dlgNewUser.show = true;
       " class="bg-deep-purple dlgButton" style="margin: 30px 0;" v-if="isAdmin">Add user</v-btn>
       <dlg-new-user ref="dlgNewUser"></dlg-new-user>

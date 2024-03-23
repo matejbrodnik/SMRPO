@@ -5,8 +5,8 @@
       <v-card-text>
         <v-select
           :items="organizations"
-          item-title="name"
-          item-value="id"
+          item-title="org_name"
+          item-value="org_id"
           label="Select"
           v-model="selectedOrganization"></v-select>
       </v-card-text>
@@ -45,7 +45,6 @@ fetchOrganizations();
 import { defineComponent, ref } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import router from '../router';
-import store from '../store';
 
 export default defineComponent({
   emits: ['update:show'],
@@ -59,37 +58,24 @@ export default defineComponent({
       console.log('Fetching organizations');
       console.log('user', user);
 
-      console.log('user', user?.data.user?.id)
+      const userId = user?.data.user?.id; // Replace this with the actual user ID
 
-      const { data: orgUserData, error: orgUserError } = await supabase
-        .from('orgs_users') // Replace 'organizations' with your actual table name
-        .select('*') // Fetch all columns
-        .eq('user_id', user?.data.user?.id); // Only fetch organizations that belong to the current user
+      const { data, error } = await supabase.rpc('get_user_organizations', { user_id: userId });
 
-      const { data: allOrgs, error: allOrgsError } = await supabase
-        .from('organization')
-        .select('*');
+      console.log('data', data);
+      console.log(error);
 
-      if (allOrgsError) throw allOrgsError;
-
-      console.log('orgUserData', orgUserData);
-      console.log('allOrgs', allOrgs);
-      const filteredOrgs = allOrgs.filter((org) =>
-        orgUserData.some((userOrg) => userOrg.org_id === org.id)
-      );
-
-      organizations.value = filteredOrgs;
-      console.log('data', orgUserData);
+      organizations.value = data;
+      console.log('data', data);
     };
 
     const enterOrganization = () => {
       // Do something with the selected organization
       console.log('selectedOrganization', selectedOrganization.value);
-      //store.commit('setOrganizationId', selectedOrganization.value);
       localStorage.setItem('organizationId', selectedOrganization.value);
       console.log(selectedOrganization.value);
       router.push('/');
-      show.value = false;
+      closeDialog();
     };
 
     const closeDialog = () => {

@@ -56,7 +56,10 @@ console.log('user role', userRole.value);
           <!-- <v-btn @click="$refs.dlgUserStory.show = true" class="dlgButton">New user story</v-btn>
           <dlg-new-story ref="dlgUserStory"></dlg-new-story> -->
         </v-list>
-        
+
+        <v-btn @click="showDialog" class="dlgButton">Uredi profil</v-btn>
+        <DlgProfile v-model="profileDlg" @update:show="profileDlg = $event"></DlgProfile>
+
         <template v-slot:append>
           <div class="pa-2">
             <v-btn block @click="signOut"> Logout </v-btn>
@@ -72,8 +75,16 @@ console.log('user role', userRole.value);
 </template>
 
 <script lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useStore } from 'vuex';
+import DlgNewStory from '../dialogs/DlgNewStory.vue';
+import DlgProfile from '../dialogs/DlgProfile.vue';
+
+const profileDlg = ref(false);
+
+const showDialog = () => {
+  profileDlg.value = true;
+};
 export default {
   data() {
     return {

@@ -18,6 +18,7 @@ const handleSignup = async () => {
       data: {
         name: name.value,
         surname: surname.value,
+        email: email.value,
       },
     },
   });
