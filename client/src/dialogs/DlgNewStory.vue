@@ -19,31 +19,46 @@
               <v-select v-model="dlgData.priority" label="Priority" :items="prio" :rules="checkEmpty" :disabled="!isScrum && !isOwner" required></v-select>
             </v-col>
             <v-col>
-              <v-text-field v-model="dlgData.work_value" label="Value" :rules="checkEmpty" :disabled="!isScrum && !isOwner" required></v-text-field>
+              <v-text-field v-model="dlgData.work_value" label="Value" :rules="checkEmpty && checkRange" :disabled="!isScrum && !isOwner" required></v-text-field>
             </v-col>
           </v-row>
           <v-row dense>
-            <v-textarea
-            label="Description"
-            clearable
-            v-model="dlgData.description"
-            :disabled="!isScrum && !isOwner"
-            ></v-textarea>
+            <v-col cols="12">
+              <v-textarea
+              label="Description"
+              clearable
+              v-model="dlgData.description"
+              :disabled="!isScrum && !isOwner"
+              ></v-textarea>
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col cols="12">
+              <v-textarea v-model="dlgData.tests" label="Tests" auto-grow :rows="1" ref="testsRef">
+
+              </v-textarea>
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-btn style="margin: 0 0 20px 4px" @click="dlgData.tests == '' ? dlgData.tests = '# ' : dlgData.tests += '\n# '; this.$refs.testsRef.focus()">
+            <v-icon size="large" style="margin-right:5px">mdi-plus</v-icon>
+            New acceptance test
+            </v-btn>
           </v-row>
           <v-row dense>
             <v-col cols="3">
-              <v-text-field v-model="dlgData.time" label="Time cost" :disabled="!isScrum"></v-text-field>
+              <v-text-field v-model="dlgData.time" label="Time cost" :disabled="!isScrum"  v-if="edit"></v-text-field>
             </v-col>
             <v-col cols="3">
-              <v-select v-model="dlgData.sprint_id" label="Sprint" :items="sprints" item-value="id" item-title="name" :disabled="!isScrum"></v-select>
+              <v-select v-model="dlgData.sprint_id" label="Sprint" :items="sprints" item-value="id" item-title="name" :disabled="!isScrum"  v-if="edit"></v-select>
             </v-col>
           </v-row>
           
         </v-card-text>
         <v-divider></v-divider>
         <v-card-actions>
-          <v-btn text="Save" variant="text" @click="saveStory" type="submit" :disabled="!isScrum && !isOwner"></v-btn>
-          <v-btn text="Delete" variant="text" @click="deleteStory" type="submit" v-if="edit" :disabled="!isScrum && !isOwner"></v-btn>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="saveStory" type="submit" :disabled="!isScrum && !isOwner">Save</v-btn>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="deleteStory" type="submit" v-if="edit" :disabled="!isScrum && !isOwner">Delete</v-btn>
           <v-spacer></v-spacer>
           <v-btn text="Close" variant="text" @click="show = false"></v-btn>
         </v-card-actions>
@@ -65,17 +80,20 @@
         name: '',
         priority: '',
         description: '',
+        tests: '',
         sprints: {id: null, name: ''},
         work_value: null,
         time: null,
         id: 0
       });
       const checkEmpty = [(value: string) => !!value || 'This field is required'];
+      const checkRange = [(value: any) => (/^\d+$/.test(value) && value > 0 && value <= 10) || 'Must be of value 1-10'];
       const sprints = ref<any[]>([]);
       const instance = ref<any>();
       const currentProjectId = ref(1);
       const isScrum = ref(false);
       const isOwner = ref(false);
+      // const tests = ref<any[]>(["neki"]);
 
       onMounted(() => {
         instance.value = getCurrentInstance();
@@ -103,27 +121,32 @@
       }
 
       const saveStory = async () => {
+        console.log("TEST")
         if(await checkDuplicate()) //če ime že obstaja, vrne true
           return;
+        console.log("TEST2")
+
         let properSprint = false;
         sprints.value.forEach((sprint) => {
-          if (sprint.id === dlgData.value.sprint_id) {
+          //if (sprint.id === dlgData.value.sprint_id) {  //sprint value se ne sme inicializirati pri ustvarjanju
             if (sprint.project_id === currentProjectId.value){
               properSprint = true;
-            }
+          //  }
           }
         });
         if (!properSprint) {
           return;
         }
+        console.log("TEST3")
+
         if (edit.value) {
           console.log('edit');
-         // console.log(dlgData.value);
+          console.log(dlgData.value);
           if (dlgData.value.state === 'finished') {
             return;
           }
-          if (dlgData.value.sprint !== null) {
-            if (dlgData.value.time === null){
+          if (dlgData.value.sprint_id !== null) { 
+            if (dlgData.value.time === null){ 
               return;
             }
           }
@@ -133,6 +156,7 @@
               sprint_id: dlgData.value.sprint_id,
               name: dlgData.value.name, 
               description: dlgData.value.description,
+              tests: dlgData.value.tests,
               project_id: currentProjectId.value,
               state: "idle",
               priority: dlgData.value.priority,
@@ -152,6 +176,7 @@
               sprint_id: dlgData.value.sprints.id,
               name: dlgData.value.name, 
               description: dlgData.value.description,
+              tests: dlgData.value.tests,
               project_id: currentProjectId.value,
               state: "idle",
               priority: dlgData.value.priority,
@@ -197,6 +222,7 @@
         dlgData,
         sprints,
         checkEmpty,
+        checkRange,
         currentProjectId,
         saveStory,
         deleteStory,

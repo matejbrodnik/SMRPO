@@ -128,6 +128,8 @@ export default defineComponent({
       storiesActiveAssigned.value = [];
       storiesFinished.value = [];
       storiesActiveUnassigned.value = [];
+      isScrum.value = false;
+      isOwner.value = false;
       const organizationId = localStorage.getItem('organizationId');
       const { data: projects, error } = await supabase
         .from('project')
