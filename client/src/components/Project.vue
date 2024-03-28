@@ -242,7 +242,7 @@ const checkEmpty = (field, isMultiple = false) => {
 const headers = ref([
   { title: 'Name', key: 'name' },
   { title: 'Project id', key: 'id' },
-  { title: 'Created at', key: 'created_at' },
+  { title: 'Created', key: 'created_at' },
   { title: '', key: 'action', sortable: false },
 ]);
 
