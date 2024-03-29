@@ -6,6 +6,13 @@
           <v-text-field v-model="dlgData.user" label="Uporabniško ime" required></v-text-field>
         </v-row> -->
 
+        <v-row dense v-if="successMessage">
+          <v-alert type="success">{{ successMessage }}</v-alert>
+        </v-row>
+        <v-row dense v-if="errorMessage">
+          <v-alert type="error">{{ errorMessage }}</v-alert>
+        </v-row>
+
         <v-row dense>
           <v-text-field v-model="dlgData.name" label="Ime" required></v-text-field>
         </v-row>
@@ -17,6 +24,7 @@
             v-model="dlgData.email"
             label="E-mail"
             :rules="[rules.required, rules.email]"
+            readonly
             required>
           </v-text-field>
         </v-row>
@@ -25,7 +33,7 @@
             v-model="dlgData.password"
             label="Change password"
             type="password"
-            :rules="[rules.required, rules.min]"
+            :rules="[rules.password]"
             required></v-text-field>
         </v-row>
       </v-card-text>
@@ -52,40 +60,50 @@ export default defineComponent({
       id: '',
       name: '',
       surname: '',
+      password: '',
     });
+
+    const successMessage = ref('');
+    const errorMessage = ref('');
 
     const updateProfile = async () => {
       const user = await (await supabase.auth.getUser()).data.user;
-      if (dlgData.value.email !== user.email) {
-        // Update the user's email
-        const { error: emailError, data } = await supabase.auth.updateUser({
-          email: dlgData.value.email,
-        });
-        /* const { data, error } = await supabase
-          .from('auth.users')
-          .update({ email: dlgData.value.email })
-          .eq('id', supabase.auth.user().id); */
-
-        console.log('data', data);
-
-        if (emailError) {
-          console.error('Error updating email:', emailError.message);
-        }
-      }
 
       if (dlgData.value.password && dlgData.value.password.length >= 8) {
         // Update the user's password
-        const { error: passwordError } = await supabase.auth.update({
+        const { error: passwordError } = await supabase.auth.updateUser({
           password: dlgData.value.password,
         });
 
         if (passwordError) {
-          console.error('Error updating password:', passwordError.message);
+          errorMessage.value = 'Error updating password: ' + passwordError.message;
+          setTimeout(() => {
+            successMessage.value = '';
+          }, 2000);
+
+          //dont update profile if password update failed
+          return;
         }
-      } else {
-        console.error('Password must be at least 8 characters long');
       }
-      console.log(JSON.stringify(dlgData.value));
+      const { data, error } = await supabase
+        .from('user_profile')
+        .update({
+          name: dlgData.value.name,
+          surname: dlgData.value.surname,
+        })
+        .eq('id', dlgData.value.id);
+
+      if (error) {
+        errorMessage.value = 'Error updating profile: ' + error.message;
+        setTimeout(() => {
+          successMessage.value = '';
+        }, 2000);
+      } else {
+        successMessage.value = 'Profile updated successfully!';
+        setTimeout(() => {
+          successMessage.value = '';
+        }, 2000);
+      }
     };
 
     async function fetchProfile() {
@@ -120,13 +138,15 @@ export default defineComponent({
       updateProfile,
       closeDialog,
       rules,
+      successMessage,
+      errorMessage,
     };
   },
 });
 
 export const rules = {
   required: (value) => !!value || 'Required.',
-  min: (value) => (value && value.length >= 8) || 'Min 8 characters',
+  min: (value) => (!!value && value.length >= 8) || 'Min 8 characters',
   email: (value) => {
     const pattern = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
     return pattern.test(value) || 'Invalid e-mail.';
@@ -136,6 +156,12 @@ export const rules = {
   organization: (value) => {
     console.log('value', value);
     return (value && value.length >= 1) || 'Select an organization';
+  },
+  password: (value) => {
+    if (!value) {
+      return true;
+    }
+    return value.length >= 8 || 'Min 8 characters';
   },
 };
 </script>
