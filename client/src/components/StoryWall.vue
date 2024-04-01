@@ -4,7 +4,7 @@
     <v-text-field>Active, assigned user stories</v-text-field>
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
-        <v-row>
+        <v-row style="margin-bottom: 5px;">
           <v-col v-for="item in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
             <v-card @click="editStory(item)">
               <v-card-title class="d-flex align-center">
@@ -33,7 +33,7 @@
     item-value="name"
   >
     <template v-slot:default="{ items }">
-      <v-row>
+      <v-row style="margin-bottom: 5px;">
         <v-col
           v-for="item in items"
           :key="item.raw.name"
@@ -63,7 +63,7 @@
     item-value="name"
   >
     <template v-slot:default="{ items }">
-      <v-row>
+      <v-row style="margin-bottom: 5px;">
         <v-col
           v-for="item in items"
           :key="item.raw.name"
@@ -89,7 +89,7 @@
   
   </div>
 
-  <v-btn @click="newStory" class="dlgButton" :disabled="!isScrum && !isOwner">New user story</v-btn>
+  <v-btn style="margin-top: 20px;" @click="newStory" class="dlgButton" :disabled="!isScrum && !isOwner">New user story</v-btn>
 </template>
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue';

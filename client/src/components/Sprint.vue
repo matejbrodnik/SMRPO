@@ -65,8 +65,12 @@
             </v-card-actions>
           </v-card>
         </v-dialog>
-    <div v-if="isLoading">Loading...</div>
-    <v-data-table v-else :headers="headers" :items="items" @click:row="showSprintEdit"></v-data-table>
+      <div style="height: 100vh; overflow: hidden;">
+        <div style="margin: 30px auto; max-width: 80%;">
+          <div v-if="isLoading">Loading...</div>
+          <v-data-table v-else :headers="headers" :items="items" @click:row="showSprintEdit"></v-data-table>
+        </div>
+      </div>
 </template>
 
 <script setup lang="ts">
