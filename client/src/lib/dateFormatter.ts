@@ -1,14 +1,14 @@
 const formatDateTime = (date: string): string => {
   const datetime = new Date(date);
   // Format the date in "DD-MM-YYYY" format 
-  const formattedDate = datetime.toLocaleDateString('en-GB', {
+  const formattedDate = datetime.toLocaleDateString('de-AT', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
   });
 
   // Format the time in "hh:mm" format
-  const formattedTime = datetime.toLocaleTimeString('en-GB', {
+  const formattedTime = datetime.toLocaleTimeString('de-AT', {
     hour: '2-digit',
     minute: '2-digit'
   });
@@ -18,15 +18,4 @@ const formatDateTime = (date: string): string => {
   return formattedDateTime;
 }
 
-const formatDate = (date: string): string => {
-  const datetime = new Date(date);
-  const formattedDate = datetime.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-
-  return formattedDate;
-}
-
-export { formatDateTime, formatDate };
+export { formatDateTime };
