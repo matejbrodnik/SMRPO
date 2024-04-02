@@ -5,8 +5,10 @@
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
         <v-row>
-          <v-col v-for="item in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
-            <v-card @click="editStory(item)">
+          <v-col v-for="(item, index) in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
+            <v-card @click="editStory(item, $event)" 
+            :class="{ 'selected': item.selected }"
+            @click.ctrl="updateSelection(items, index)">
               <v-card-title class="d-flex align-center">
                 <h4 style="text-align:left;" class="card-title">{{ item.raw.name + " (" + item.raw.priority + ") " }}
                 </h4>
@@ -35,14 +37,16 @@
     <template v-slot:default="{ items }">
       <v-row>
         <v-col
-          v-for="item in items"
+          v-for="(item, index) in items"
           :key="item.raw.name"
           cols="12"
           lg="3"
           md="3"
           sm="6"
         >
-          <v-card @click="editStory(item)">
+          <v-card @click="editStory(item, $event)" 
+          :class="{ 'selected': item.selected }"
+          @click.ctrl="updateSelection(items, index)">
             <v-card-title class="d-flex align-center">
               <h4 class="card-title" >{{ item.raw.name + " (" + item.raw.priority + ") "}} </h4>
             </v-card-title>
@@ -65,14 +69,16 @@
     <template v-slot:default="{ items }">
       <v-row>
         <v-col
-          v-for="item in items"
+          v-for="(item, index) in items"
           :key="item.raw.name"
           cols="12"
           lg="3"
           md="3"
           sm="6"
         >
-          <v-card @click="editStory(item)">
+          <v-card @click="editStory(item, $event)" 
+          :class="{ 'selected': item.selected }"
+          @click.ctrl="updateSelection(items, index)">
             <v-card-title class="d-flex align-center">
               <h4>{{ item.raw.name + " (" + item.raw.priority + ") "}} </h4>
             </v-card-title>
@@ -95,6 +101,7 @@
 import { defineComponent, ref, onMounted, watch } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import DlgNewStory from '../dialogs/DlgNewStory.vue';
+import { ClickOutside } from 'vuetify/directives';
 
 export default defineComponent({
   components: {
@@ -180,13 +187,19 @@ export default defineComponent({
       dlgNewStory.value.currentProjectId = selectedProject.value.id;
       dlgNewStory.value.show = true;
     }
-    function editStory(item: any) {
+    function editStory(item: any, event) {
+      if (event.ctrlKey)
+        return;
       dlgEditStory.value.isScrum = isScrum.value;
       dlgEditStory.value.isOwner = isOwner.value;
       dlgEditStory.value.dlgData = item.raw;
       dlgEditStory.value.edit = true;
       dlgEditStory.value.currentProjectId = selectedProject.value.id;
       dlgEditStory.value.show = true;
+    }
+
+    function updateSelection(items: any, index: number) {
+      items[index].selected = !items[index].selected;
     }
 
     watch(() => props.selectedProject, async (newVal) => {
@@ -197,15 +210,15 @@ export default defineComponent({
     });
 
     supabase.auth.onAuthStateChange(async (_, session) => {
-    if (session) {
-      const jwt = session.access_token;
+      if (session) {
+        const jwt = session.access_token;
 
-      const payload = JSON.parse(atob(jwt.split('.')[1]));
-      userId.value = payload.sub;
-    } else {
-      console.log('The user is not authenticated');
-    }
-  });
+        const payload = JSON.parse(atob(jwt.split('.')[1]));
+        userId.value = payload.sub;
+      } else {
+        console.log('The user is not authenticated');
+      }
+    });
 
     return {
       show,
@@ -218,7 +231,8 @@ export default defineComponent({
       dlgEditStory,
       dlgNewStory,
       newStory,
-      editStory
+      editStory,
+      updateSelection
     };
   },
 });
@@ -230,5 +244,9 @@ export default defineComponent({
   height: auto;
   min-height: 32px;
   white-space: pre-wrap;
+}
+.selected {
+  background-color: #e7e7e7;
+  box-shadow:inset 1px 1px 3px 3px #d9d9f0;
 }
 </style>

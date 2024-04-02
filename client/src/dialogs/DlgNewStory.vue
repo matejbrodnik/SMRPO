@@ -34,13 +34,18 @@
           </v-row>
           <v-row dense>
             <v-col cols="12">
-              <v-textarea v-model="dlgData.tests" label="Tests" auto-grow :rows="1" ref="testsRef">
-
-              </v-textarea>
+              <v-data-iterator :items="dlgData.tests">
+              <template v-slot:default="{ items }">
+                <v-row v-for="(item, index) in items" dense>
+                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item.raw, index)">
+                  </v-text-field>
+                </v-row>
+              </template>
+            </v-data-iterator>
             </v-col>
           </v-row>
           <v-row dense>
-            <v-btn style="margin: 0 0 20px 4px" @click="dlgData.tests == '' ? dlgData.tests = '# ' : dlgData.tests += '\n# '; this.$refs.testsRef.focus()">
+            <v-btn style="margin: 0 0 20px 4px" @click="addNewTest">
             <v-icon size="large" style="margin-right:5px">mdi-plus</v-icon>
             New acceptance test
             </v-btn>
@@ -70,6 +75,7 @@
   <script lang="ts">
   import { defineComponent, ref, onMounted, getCurrentInstance } from 'vue';
   import { supabase } from '../lib/supabaseClient';
+  import { GoTrueAdminApi } from '@supabase/supabase-js';
 
   export default defineComponent({
     setup() {
@@ -80,10 +86,10 @@
         name: '',
         priority: '',
         description: '',
-        tests: '',
         sprints: {id: null, name: ''},
         work_value: null,
         time: null,
+        tests: [],
         id: 0
       });
       const checkEmpty = [(value: string) => !!value || 'This field is required'];
@@ -93,7 +99,6 @@
       const currentProjectId = ref(1);
       const isScrum = ref(false);
       const isOwner = ref(false);
-      // const tests = ref<any[]>(["neki"]);
 
       onMounted(() => {
         instance.value = getCurrentInstance();
@@ -121,10 +126,8 @@
       }
 
       const saveStory = async () => {
-        console.log("TEST")
         if(await checkDuplicate()) //če ime že obstaja, vrne true
           return;
-        console.log("TEST2")
 
         let properSprint = false;
         sprints.value.forEach((sprint) => {
@@ -137,8 +140,6 @@
         if (!properSprint) {
           return;
         }
-        console.log("TEST3")
-
         if (edit.value) {
           console.log('edit');
           console.log(dlgData.value);
@@ -150,38 +151,65 @@
               return;
             }
           }
+          let tmp = [];
+          for (let i = 0; i < dlgData.value.tests.length; i++) {
+            if (dlgData.value.tests[i] != "" && dlgData.value.tests[i] != "# ")
+              tmp.push(dlgData.value.tests[i])
+          }
           const {data, error} = await supabase
             .from('user_story')
             .update([{
               sprint_id: dlgData.value.sprint_id,
               name: dlgData.value.name, 
               description: dlgData.value.description,
-              tests: dlgData.value.tests,
               project_id: currentProjectId.value,
               state: "idle",
               priority: dlgData.value.priority,
               work_value: dlgData.value.work_value,
-              time: dlgData.value.time
+              time: dlgData.value.time,
+              tests: tmp
             }])
             .eq('id', dlgData.value.id);
           
           if(error)
             throw error;
 
+          // const {data: tests, error: error2} = await supabase
+          //   .from('user_story_tests')
+          //   .update([{
+          //     sprint_id: dlgData.value.sprint_id,
+          //     name: dlgData.value.name, 
+          //     description: dlgData.value.description,
+          //     project_id: currentProjectId.value,
+          //     state: "idle",
+          //     priority: dlgData.value.priority,
+          //     work_value: dlgData.value.work_value,
+          //     time: dlgData.value.time
+          //   }])
+          //   .eq('id', dlgData.value.id);
+          
+          // if(error2)
+          //   throw error2;
+
         }
         else {
+          let tmp = [];
+          for (let i = 0; i < dlgData.value.tests.length; i++) {
+            if (dlgData.value.tests[i] != "" && dlgData.value.tests[i] != "# ")
+              tmp.push(dlgData.value.tests[i])
+          }
           const {data, error} = await supabase
             .from('user_story')
             .insert([{
               sprint_id: dlgData.value.sprints.id,
               name: dlgData.value.name, 
               description: dlgData.value.description,
-              tests: dlgData.value.tests,
               project_id: currentProjectId.value,
               state: "idle",
               priority: dlgData.value.priority,
               work_value: dlgData.value.work_value,
-              time: dlgData.value.time
+              time: dlgData.value.time,
+              tests: tmp
             }]);
           if(error)
             throw error;
@@ -212,6 +240,14 @@
             throw error;
           show.value = false;
       }
+
+      function addNewTest(){
+        dlgData.value.tests.push('# '); 
+      }
+
+      function updateItem(item: any, index: number){
+        dlgData.value.tests[index] = item;
+      }
   
       return {
         show,
@@ -221,6 +257,8 @@
         prio,
         dlgData,
         sprints,
+        addNewTest,
+        updateItem,
         checkEmpty,
         checkRange,
         currentProjectId,
