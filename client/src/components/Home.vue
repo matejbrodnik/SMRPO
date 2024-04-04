@@ -6,6 +6,7 @@ import User from './User.vue';
 // import StoryWall from './StoryWall.vue';
 import Sprint from './Sprint.vue';
 import ProductBacklog from './ProductBacklog.vue';
+import SprintBacklog from './SprintBacklog.vue';
 
 defineProps<{ msg: string }>();
 
@@ -44,6 +45,9 @@ const signOut = async () => {
           </v-list-item>
           <v-list-item @click="selected = ProductBacklog" prepend-icon="mdi-file-tree">
             <v-list-title>Product backlog</v-list-title>
+          </v-list-item>
+          <v-list-item @click="selected = SprintBacklog" prepend-icon="mdi-invoice-list-outline">
+            <v-list-title>Sprint backlog</v-list-title>
           </v-list-item>
           <!-- <v-btn @click="$refs.dlgUserStory.show = true" class="dlgButton">New user story</v-btn>
           <dlg-new-story ref="dlgUserStory"></dlg-new-story> -->
