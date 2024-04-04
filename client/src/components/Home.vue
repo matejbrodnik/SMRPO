@@ -22,7 +22,7 @@ const signOut = async () => {
     <v-layout>
       <v-navigation-drawer class="bg-deep-purple" theme="dark" permanent>
         <v-list>
-          <v-list-item prepend-icon="mdi-account-circle">
+          <v-list-item prepend-icon="mdi-account-circle" @click="showDialog" class="dlgButton">
             <v-list-title style="font-weight: 600;">{{ userName }}</v-list-title>
           </v-list-item>
         </v-list>
@@ -49,7 +49,6 @@ const signOut = async () => {
           <dlg-new-story ref="dlgUserStory"></dlg-new-story> -->
         </v-list>
 
-        <v-btn @click="showDialog" class="dlgButton">Uredi profil</v-btn>
         <DlgProfile v-model="profileDlg" @update:show="profileDlg = $event"></DlgProfile>
 
         <template v-slot:append>

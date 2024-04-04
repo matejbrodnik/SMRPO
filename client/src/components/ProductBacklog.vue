@@ -1,6 +1,7 @@
 <template>
 
-
+<div style="height: 100%;">
+    <div style="margin: 30px auto; max-width: 80%;">
     <!-- Project Dropdown -->
     <v-card width="50%">
 
@@ -11,15 +12,19 @@
     </v-card>
     <!-- Content that changes based on the selection -->
 
-    <div v-if="isLoading"></div>
-    <div v-else>
-        <h3>Details for {{ selectedProject.name }}</h3>
-        <p>Description: {{ selectedProject.description }}</p>
-        <!-- Add more project details here -->
-        <v-card>
-            <component :is="StoryWall" :selectedProject="selectedProject" />
-        </v-card>
+    <div style="margin: 20px 0;">
+        <div v-if="isLoading"></div>
+        <div v-else>
+            <h3>Details for {{ selectedProject.name }}</h3>
+            <p>Description: {{ selectedProject.description }}</p>
+            <!-- Add more project details here -->
+            <v-card>
+                <component :is="StoryWall" :selectedProject="selectedProject" />
+            </v-card>
+        </div>
     </div>
+    </div>
+</div>
 
 
 </template>
