@@ -3,7 +3,7 @@
     <v-card>
       <v-card-title>
         <p style="text-align:left;">
-          {{ edit ? 'Edit user story' : 'New user story' }}
+          {{ edit ? dlgData.name : 'New user story' }}
           <!-- <span style="float:right;">
             <v-icon>mdi-delete</v-icon>
           </span> -->
@@ -37,7 +37,7 @@
               <v-data-iterator :items="dlgData.tests">
               <template v-slot:default="{ items }">
                 <v-row v-for="(item, index) in items" dense>
-                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item.raw, index)">
+                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item.raw, index)" :disabled="!isScrum && !isOwner">
                   </v-text-field>
                 </v-row>
               </template>
@@ -45,7 +45,7 @@
             </v-col>
           </v-row>
           <v-row dense>
-            <v-btn style="margin: 0 0 20px 4px" @click="addNewTest">
+            <v-btn style="margin: 0 0 20px 4px" @click="addNewTest" v-if="isScrum || isOwner">
             <v-icon size="large" style="margin-right:5px">mdi-plus</v-icon>
             New acceptance test
             </v-btn>
@@ -173,24 +173,6 @@
           
           if(error)
             throw error;
-
-          // const {data: tests, error: error2} = await supabase
-          //   .from('user_story_tests')
-          //   .update([{
-          //     sprint_id: dlgData.value.sprint_id,
-          //     name: dlgData.value.name, 
-          //     description: dlgData.value.description,
-          //     project_id: currentProjectId.value,
-          //     state: "idle",
-          //     priority: dlgData.value.priority,
-          //     work_value: dlgData.value.work_value,
-          //     time: dlgData.value.time
-          //   }])
-          //   .eq('id', dlgData.value.id);
-          
-          // if(error2)
-          //   throw error2;
-
         }
         else {
           let tmp = [];

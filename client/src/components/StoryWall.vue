@@ -1,9 +1,9 @@
 <template>
-
   <div>
-    <v-text-field>Active, assigned user stories</v-text-field>
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
+        <v-text-field>Active, assigned user stories
+        </v-text-field>
         <v-row>
           <v-col v-for="(item, index) in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
             <v-card @click="editStory(item, $event)" 
@@ -29,12 +29,16 @@
 
   <v-divider></v-divider>
   <div>
-    <v-text-field>Active, unassigned user stories</v-text-field>
     <v-data-iterator
     :items="storiesActiveUnassigned"
     item-value="name"
   >
     <template v-slot:default="{ items }">
+      <v-text-field>Active, unassigned user stories
+        <v-btn @click="addToSprint(items)" prepend-icon="mdi-plus"  style="margin-left: 10px;" v-if="items.some((el) => el.selected)">
+              Add to sprint
+        </v-btn>
+      </v-text-field>
       <v-row>
         <v-col
           v-for="(item, index) in items"
@@ -61,12 +65,12 @@
   </div>
   <v-divider></v-divider>
   <div>
-    <v-text-field>Completed user stories</v-text-field>
     <v-data-iterator
     :items="storiesFinished"
     item-value="name"
   >
     <template v-slot:default="{ items }">
+    <v-text-field>Completed user stories</v-text-field>
       <v-row>
         <v-col
           v-for="(item, index) in items"
@@ -198,8 +202,20 @@ export default defineComponent({
       dlgEditStory.value.show = true;
     }
 
+    function addToSprint(items: any) {
+      let tmp = []
+      console.log(items)
+      storiesActiveAssigned.value.forEach(el => {
+        if (el.selected)
+          tmp.push(el)
+          //console.log(el)
+      });
+      
+    }
+
     function updateSelection(items: any, index: number) {
       items[index].selected = !items[index].selected;
+      console.log(items)
     }
 
     watch(() => props.selectedProject, async (newVal) => {
@@ -232,6 +248,7 @@ export default defineComponent({
       dlgNewStory,
       newStory,
       editStory,
+      addToSprint,
       updateSelection
     };
   },
