@@ -1,12 +1,14 @@
 <template>
-
   <div>
-    <v-text-field>Active, assigned user stories</v-text-field>
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
+        <v-text-field>Active, assigned user stories
+        </v-text-field>
         <v-row style="margin-bottom: 5px;">
-          <v-col v-for="item in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
-            <v-card @click="editStory(item)">
+          <v-col v-for="(item, index) in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
+            <v-card @click="editStory(item, $event)" 
+            :class="{ 'selected': item.selected }"
+            @click.ctrl="updateSelection(items, index)">
               <v-card-title class="d-flex align-center">
                 <h4 style="text-align:left;" class="card-title">{{ item.raw.name + " (" + item.raw.priority + ") " }}
                 </h4>
@@ -27,22 +29,28 @@
 
   <v-divider></v-divider>
   <div>
-    <v-text-field>Active, unassigned user stories</v-text-field>
     <v-data-iterator
     :items="storiesActiveUnassigned"
     item-value="name"
   >
     <template v-slot:default="{ items }">
+      <v-text-field>Active, unassigned user stories
+        <v-btn @click="addToSprint(items)" prepend-icon="mdi-plus"  style="margin-left: 10px;" v-if="items.some((el) => el.selected)">
+              Add to sprint
+        </v-btn>
+      </v-text-field>
       <v-row style="margin-bottom: 5px;">
         <v-col
-          v-for="item in items"
+          v-for="(item, index) in items"
           :key="item.raw.name"
           cols="12"
           lg="3"
           md="3"
           sm="6"
         >
-          <v-card @click="editStory(item)">
+          <v-card @click="editStory(item, $event)" 
+          :class="{ 'selected': item.selected }"
+          @click.ctrl="updateSelection(items, index)">
             <v-card-title class="d-flex align-center">
               <h4 class="card-title" >{{ item.raw.name + " (" + item.raw.priority + ") "}} </h4>
             </v-card-title>
@@ -57,22 +65,24 @@
   </div>
   <v-divider></v-divider>
   <div>
-    <v-text-field>Completed user stories</v-text-field>
     <v-data-iterator
     :items="storiesFinished"
     item-value="name"
   >
     <template v-slot:default="{ items }">
+    <v-text-field>Completed user stories</v-text-field>
       <v-row style="margin-bottom: 5px;">
         <v-col
-          v-for="item in items"
+          v-for="(item, index) in items"
           :key="item.raw.name"
           cols="12"
           lg="3"
           md="3"
           sm="6"
         >
-          <v-card @click="editStory(item)">
+          <v-card @click="editStory(item, $event)" 
+          :class="{ 'selected': item.selected }"
+          @click.ctrl="updateSelection(items, index)">
             <v-card-title class="d-flex align-center">
               <h4>{{ item.raw.name + " (" + item.raw.priority + ") "}} </h4>
             </v-card-title>
@@ -95,6 +105,7 @@
 import { defineComponent, ref, onMounted, watch } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import DlgNewStory from '../dialogs/DlgNewStory.vue';
+import { ClickOutside } from 'vuetify/directives';
 
 export default defineComponent({
   components: {
@@ -178,15 +189,45 @@ export default defineComponent({
       dlgNewStory.value.isOwner = isOwner.value;
       dlgNewStory.value.edit = false;
       dlgNewStory.value.currentProjectId = selectedProject.value.id;
+      dlgNewStory.value.dlgData = {
+        name: '',
+        priority: '',
+        description: '',
+        sprints: {id: null, name: ''},
+        work_value: null,
+        time: null,
+        tests: [],
+        id: 0
+      }
+      dlgNewStory.value.sameName = false;
       dlgNewStory.value.show = true;
+
     }
-    function editStory(item: any) {
+    function editStory(item: any, event) {
+      if (event.ctrlKey)
+        return;
       dlgEditStory.value.isScrum = isScrum.value;
       dlgEditStory.value.isOwner = isOwner.value;
       dlgEditStory.value.dlgData = item.raw;
       dlgEditStory.value.edit = true;
       dlgEditStory.value.currentProjectId = selectedProject.value.id;
       dlgEditStory.value.show = true;
+    }
+
+    function addToSprint(items: any) {
+      let tmp = []
+      console.log(items)
+      storiesActiveAssigned.value.forEach(el => {
+        if (el.selected)
+          tmp.push(el)
+          //console.log(el)
+      });
+      
+    }
+
+    function updateSelection(items: any, index: number) {
+      items[index].selected = !items[index].selected;
+      console.log(items)
     }
 
     watch(() => props.selectedProject, async (newVal) => {
@@ -197,15 +238,15 @@ export default defineComponent({
     });
 
     supabase.auth.onAuthStateChange(async (_, session) => {
-    if (session) {
-      const jwt = session.access_token;
+      if (session) {
+        const jwt = session.access_token;
 
-      const payload = JSON.parse(atob(jwt.split('.')[1]));
-      userId.value = payload.sub;
-    } else {
-      console.log('The user is not authenticated');
-    }
-  });
+        const payload = JSON.parse(atob(jwt.split('.')[1]));
+        userId.value = payload.sub;
+      } else {
+        console.log('The user is not authenticated');
+      }
+    });
 
     return {
       show,
@@ -218,7 +259,9 @@ export default defineComponent({
       dlgEditStory,
       dlgNewStory,
       newStory,
-      editStory
+      editStory,
+      addToSprint,
+      updateSelection
     };
   },
 });
@@ -230,5 +273,9 @@ export default defineComponent({
   height: auto;
   min-height: 32px;
   white-space: pre-wrap;
+}
+.selected {
+  background-color: #e7e7e7;
+  box-shadow:inset 1px 1px 3px 3px #d9d9f0;
 }
 </style>
