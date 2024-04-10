@@ -189,7 +189,19 @@ export default defineComponent({
       dlgNewStory.value.isOwner = isOwner.value;
       dlgNewStory.value.edit = false;
       dlgNewStory.value.currentProjectId = selectedProject.value.id;
+      dlgNewStory.value.dlgData = {
+        name: '',
+        priority: '',
+        description: '',
+        sprints: {id: null, name: ''},
+        work_value: null,
+        time: null,
+        tests: [],
+        id: 0
+      }
+      dlgNewStory.value.sameName = false;
       dlgNewStory.value.show = true;
+
     }
     function editStory(item: any, event) {
       if (event.ctrlKey)

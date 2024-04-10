@@ -10,6 +10,9 @@
         </p>
       </v-card-title>
       <v-form @submit.prevent>
+        <v-alert v-if="sameName" type="error">
+          Story cannot have a duplicate name.
+        </v-alert>
         <v-card-text>
           <v-row dense>
             <v-col cols="7">
@@ -37,7 +40,8 @@
               <v-data-iterator :items="dlgData.tests">
               <template v-slot:default="{ items }">
                 <v-row v-for="(item, index) in items" dense>
-                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item.raw, index)" :disabled="!isScrum && !isOwner">
+                  <!-- <v-checkbox v-model="item.selected"></v-checkbox> -->
+                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item, index)" :disabled="!isScrum && !isOwner">
                   </v-text-field>
                 </v-row>
               </template>
@@ -54,14 +58,16 @@
             <v-col cols="3">
               <v-text-field v-model="dlgData.time" label="Time cost" :disabled="!isScrum"  v-if="edit"></v-text-field>
             </v-col>
-            <v-col cols="3">
+            <!-- <v-col cols="3">
               <v-select v-model="dlgData.sprint_id" label="Sprint" :items="sprints" item-value="id" item-title="name" :disabled="!isScrum"  v-if="edit"></v-select>
-            </v-col>
+            </v-col> -->
           </v-row>
           
         </v-card-text>
         <v-divider></v-divider>
         <v-card-actions>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="completeStory" type="submit" v-if="isOwner && edit">Complete</v-btn>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="rejectStory" type="submit" v-if="isOwner && edit">Reject</v-btn>
           <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="saveStory" type="submit" :disabled="!isScrum && !isOwner">Save</v-btn>
           <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="deleteStory" type="submit" v-if="edit" :disabled="!isScrum && !isOwner">Delete</v-btn>
           <v-spacer></v-spacer>
@@ -70,14 +76,19 @@
       </v-form>
     </v-card>
   </v-dialog>
+  <dlg-comment ref="dlgReject"></dlg-comment>
 </template>
   
   <script lang="ts">
   import { defineComponent, ref, onMounted, getCurrentInstance } from 'vue';
   import { supabase } from '../lib/supabaseClient';
+  import DlgComment from './DlgComment.vue';
   import { GoTrueAdminApi } from '@supabase/supabase-js';
 
   export default defineComponent({
+    components: {
+      DlgComment
+    },
     setup() {
       const show = ref(false);
       const edit = ref(false);
@@ -99,6 +110,8 @@
       const currentProjectId = ref(1);
       const isScrum = ref(false);
       const isOwner = ref(false);
+      const dlgReject = ref<any>({});
+      const sameName = ref(false);
 
       onMounted(() => {
         instance.value = getCurrentInstance();
@@ -126,20 +139,22 @@
       }
 
       const saveStory = async () => {
-        if(await checkDuplicate()) //če ime že obstaja, vrne true
-          return;
-
-        let properSprint = false;
-        sprints.value.forEach((sprint) => {
-          //if (sprint.id === dlgData.value.sprint_id) {  //sprint value se ne sme inicializirati pri ustvarjanju
-            if (sprint.project_id === currentProjectId.value){
-              properSprint = true;
-          //  }
-          }
-        });
-        if (!properSprint) {
+        if(await checkDuplicate()) {//če ime že obstaja, vrne true
+          sameName.value = true;
+          console.log("AAAAA")
           return;
         }
+        // let properSprint = false;
+        // sprints.value.forEach((sprint) => {
+        //   if (sprint.id === dlgData.value.sprint_id) {  //sprint value se ne sme inicializirati pri ustvarjanju
+        //     if (sprint.project_id === currentProjectId.value){
+        //       properSprint = true;
+        //    }
+        //   }
+        // });
+        // if (!properSprint) {
+        //   return;
+        // }
         if (edit.value) {
           console.log('edit');
           console.log(dlgData.value);
@@ -228,7 +243,16 @@
       }
 
       function updateItem(item: any, index: number){
-        dlgData.value.tests[index] = item;
+        dlgData.value.tests[index] = item.raw;
+      }
+
+      function completeStory(){
+        console.log(dlgData.value.tests)
+      }
+
+      function rejectStory(){
+        dlgReject.value.show = true;
+        dlgReject.value.storyId = dlgData.value.id;
       }
   
       return {
@@ -243,9 +267,13 @@
         updateItem,
         checkEmpty,
         checkRange,
+        sameName,
         currentProjectId,
         saveStory,
         deleteStory,
+        completeStory,
+        rejectStory,
+        dlgReject
       };
     },
   });
