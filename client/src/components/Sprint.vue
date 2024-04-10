@@ -22,8 +22,12 @@
                 <v-col cols="7">
                   <v-text-field v-model="sprintData.name" label="Name" required></v-text-field>
                 </v-col>
+                
                 <v-divider></v-divider>
-
+                <v-col cols="3">
+                  <v-text-field v-model="sprintData.duration" label="Duration (pts.)" required></v-text-field>
+                </v-col>
+                <v-divider></v-divider>
                 <v-col cols="4">
                   <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
                     transition="scale-transition" offset-y min-width="290px">
@@ -143,6 +147,7 @@ const sprintData = ref({
   project_id: '',
   id: '',
   name: '',
+  duration: '',
   start_date: ref([]),
   end_date: ref([]),
 });
@@ -150,6 +155,7 @@ const sprintData = ref({
 const resetFormAndCloseDialog = () => {
   sprintData.value = {
     name: '',
+    duration: '',
     startDate: ref([]),
     endDate: ref([]),
     project_id: '',
@@ -196,18 +202,23 @@ async function editSprint() {
   } else {
     sprintOverlap.value = false;
   }
-  var duration = countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8 / 6;
+  //var duration = countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8 / 6;
   // round to int
-  duration = Math.round(duration)
+  //duration = Math.round(duration)
   console.log(sprintData)
-  console.log(sprintData.value.start_date)
-
+  //console.log(sprintData.value.start_date)
+  var duration = Number(sprintData.value.duration);
+  if (1000 < duration || duration < 0){
+    showSprintError.value = true;
+    return false;
+  }
   const updates = {
       id: sprintData.value.id,
       name: sprintData.value.name,
       start_date: sprintData.value.start_date,
       end_date: sprintData.value.end_date,
-      duration: duration,
+      duration: sprintData.value.duration,
+      project_id: sprintData.value.project_id,
     };
 
   const { error } = await supabase.from('sprints').upsert(updates);
@@ -235,6 +246,7 @@ const showSprintEdit = (click, item) => {
   sprintData.value.name = item.item.name;
   sprintData.value.id = item.item.id;
   sprintData.value.project_id = item.item.project_id;
+  sprintData.value.duration = item.item.duration;
   showSprintEditDlg.value = true;
 };
 
@@ -317,6 +329,7 @@ async function fetchSprints() {
         sprint.end_date = formatDateTime(sprint.end_date);
         sprint.project_name = project.name;
         sprint.project_id = project.id;
+        sprint.duration = sprint.duration;
         items.value.push(sprint);
       });
     });
