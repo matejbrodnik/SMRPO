@@ -19,18 +19,20 @@
                             <v-col cols="10">
                                 <div v-if="hasNoUserStories">This sprint has no user stories assigned.</div>
                                 <div v-else>
-                                    <v-card v-for="story in userStories" :key="story.id" color="deep-purple" style="margin-bottom: 30px;">
+                                    <v-card v-for="story in userStories" :key="story.id" color="deep-purple"
+                                        style="padding: 20px; margin-bottom: 30px;">
                                         <v-card-item>
                                             <v-card-title>{{ story.name }}</v-card-title>
                                             <v-card-subtitle>{{ story.description }}</v-card-subtitle>
                                         </v-card-item>
                                         <v-divider></v-divider>
                                         <v-card-text>Priority: {{ story.priority }}
-                                            <br>Status:
-                                            <v-icon v-if="story.state=='finished'" class="bg-green"
-                                            style="border-radius: 50%;">mdi-check</v-icon>
-                                            <v-icon v-else style="border-radius: 50%;">mdi-progress-check</v-icon>
                                         </v-card-text>
+                                        <v-divider></v-divider>
+                                        <v-checkbox v-for="subtask in story.subtasks" :key=subtask.id
+                                            v-model="subtask.is_done" :label="subtask.description"
+                                            @update:model-value="changeSubtaskDone(subtask)">
+                                        </v-checkbox>
                                     </v-card>
                                 </div>
                             </v-col>
@@ -42,6 +44,12 @@
         </div>
     </div>
 </template>
+
+<style>
+.v-input__details {
+    display: none;
+}
+</style>
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
@@ -97,7 +105,6 @@ async function getCurrentSprint() {
         console.error('Error fetching sprints');
     } else {
         sprints.value = data;
-        console.log('Sprints:', sprints.value);
         currentSprint.value = sprints.value[0];
     }
 }
@@ -119,8 +126,46 @@ async function getUserStories() {
         console.error('Error fetching user stories');
     } else {
         userStories.value = data;
+        userStories.value.forEach(async (userStory: any) => {
+            await getSubtasks(userStory);
+        });
     }
 }
 
+async function getSubtasks(userStory: any) {
+    const { data, error } = await supabase
+        .from('subtasks')
+        .select('id, description, is_done, developer_id')
+        .eq('user_story_id', userStory.id);
+    if (error) {
+        console.error('Error fetching subtasks');
+    } else {
+        data.forEach(async (data: any) => {
+            const dev = await supabase
+                .from('user_profile')
+                .select('name, surname')
+                .eq('id', data.developer_id)
+                .single();
+
+            if (dev.data) {
+                data.developer = `${dev.data.name} ${dev.data.surname}`;
+            }
+        });
+        userStory.subtasks = data;
+    }
+}
+
+async function changeSubtaskDone(subtask: any) {
+    console.log("Changing subtask done");
+    const { error } = await supabase
+        .from('subtasks')
+        .update({ is_done: subtask.is_done })
+        .eq('id', subtask.id);
+    if (error) {
+        console.error('Error updating subtask');
+    }
+
+    console.log(subtask.is_done);
+}
 
 </script>
