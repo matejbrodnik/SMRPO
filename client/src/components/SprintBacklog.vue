@@ -6,15 +6,14 @@
             <v-select v-else v-model="selectedProject" :items="projects" label="Select a project" item-title="name"
                 @update:model-value="getUserStories" return-object>
             </v-select>
-            <div>
-                <div v-if="isLoading"></div>
+            <div style="padding: 30px 0;">
+                <div v-if="!hasCurrentSprint">There is no active sprint for this project.</div>
                 <div v-else>
-                    <h3>Details for {{ selectedProject.name }}</h3>
-                    <p>Description: {{ selectedProject.description }}</p>
+                        <b>Sprint data</b>
+                        <div>Name: {{ currentSprint.name }}</div>
+                        <div>Active from {{ formatDate(currentSprint.start_date) }} to {{ formatDate(currentSprint.end_date) }}</div>
+                        <div>Velocity: {{ currentSprint.duration }} pts</div>
                     <v-container style="margin-top: 40px;">
-                        <v-row align="center" justify="center" style="margin-bottom: 20px;">
-                            User stories
-                        </v-row>
                         <v-row align="center" justify="center">
                             <v-col cols="10">
                                 <div v-if="hasNoUserStories">This sprint has no user stories assigned.</div>
@@ -55,6 +54,7 @@
 import { onMounted } from 'vue';
 import { ref } from 'vue';
 import { supabase } from '../lib/supabaseClient';
+import { formatDate } from '../lib/dateFormatter';
 
 onMounted(() => {
     getProjects();
@@ -69,11 +69,14 @@ const selectedProject = ref({
     description: '',
     sprint: '',
 });
-const sprints = ref<any[]>([]);
 const currentSprint = ref({
     id: '',
     name: '',
+    start_date: '',
+    end_date: '',
+    duration: '',
 });
+const hasCurrentSprint = ref(false);
 const hasNoUserStories = ref(false);
 const userStories = ref<any[]>([]);
 
@@ -95,24 +98,31 @@ async function getProjects() {
 }
 
 async function getCurrentSprint() {
+    const currentDate = new Date();
     const { data, error } = await supabase
         .from('sprints')
-        .select('id, name')
+        .select('id, name, start_date, end_date, duration')
         .eq('project_id', selectedProject.value.id)
-        .order('start_date', { ascending: false })
-        .limit(1);
     if (error) {
         console.error('Error fetching sprints');
     } else {
-        sprints.value = data;
-        currentSprint.value = sprints.value[0];
+        if (data) {
+            data.forEach((sprint) => {
+                if (new Date(sprint.start_date) < currentDate && new Date(sprint.end_date) > currentDate) {
+                    hasCurrentSprint.value = true;
+                    currentSprint.value = sprint;
+                    return;
+                }
+            })
+        }
     }
 }
 
 async function getUserStories() {
+    hasCurrentSprint.value = false;
     await getCurrentSprint();
 
-    if (!currentSprint.value) {
+    if (currentSprint.value.id == "") {
         hasNoUserStories.value = true;
         return;
     }
@@ -135,24 +145,12 @@ async function getUserStories() {
 async function getSubtasks(userStory: any) {
     const { data, error } = await supabase
         .from('subtasks')
-        .select('id, description, is_done, developer_id')
+        .select('id, description, is_done')
         .eq('user_story_id', userStory.id);
     if (error) {
         console.error('Error fetching subtasks');
-    } else {
-        data.forEach(async (data: any) => {
-            const dev = await supabase
-                .from('user_profile')
-                .select('name, surname')
-                .eq('id', data.developer_id)
-                .single();
-
-            if (dev.data) {
-                data.developer = `${dev.data.name} ${dev.data.surname}`;
-            }
-        });
-        userStory.subtasks = data;
     }
+    userStory.subtasks = data;
 }
 
 async function changeSubtaskDone(subtask: any) {
@@ -164,8 +162,6 @@ async function changeSubtaskDone(subtask: any) {
     if (error) {
         console.error('Error updating subtask');
     }
-
-    console.log(subtask.is_done);
 }
 
 </script>
