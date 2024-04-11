@@ -18,4 +18,15 @@ const formatDateTime = (date: string): string => {
   return formattedDateTime;
 }
 
-export { formatDateTime };
+const formatDate = (date: string): string => {
+  const datetime = new Date(date);
+  const formattedDate = datetime.toLocaleDateString('de-AT', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+
+  return formattedDate;
+}
+
+export { formatDateTime, formatDate };
