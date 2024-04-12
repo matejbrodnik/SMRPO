@@ -4,15 +4,16 @@
 
             <div v-if="isLoading">Loading...</div>
             <v-select v-else v-model="selectedProject" :items="projects" label="Select a project" item-title="name"
-                @update:model-value="getUserStories" return-object>
+                @update:model-value="getCurrentSprint" return-object>
             </v-select>
             <div style="padding: 30px 0;">
-                <div v-if="!hasCurrentSprint">There is no active sprint for this project.</div>
+                <div v-if="noActiveSprint">There is no active sprint for this project.</div>
                 <div v-else>
                     <b>Sprint data</b>
                     <div>Name: {{ currentSprint.name }}</div>
-                    <div>Active from {{ formatDate(currentSprint.start_date) }} to {{ formatDate(currentSprint.end_date)
-                        }}</div>
+                    <div>Active from {{ formatDate(currentSprint.start_date) }} to {{
+                        formatDate(currentSprint.end_date)
+                    }}</div>
                     <div>Velocity: {{ currentSprint.duration }} pts</div>
                     <v-container>
                         <div v-if="hasNoUserStories">This sprint has no user stories assigned.</div>
@@ -139,7 +140,7 @@ const currentSprint = ref({
     end_date: '',
     duration: '',
 });
-const hasCurrentSprint = ref(false);
+const noActiveSprint = ref(false);
 const hasNoUserStories = ref(false);
 const userStories = ref<any[]>([]);
 
@@ -158,6 +159,7 @@ const subtask = ref({
 const developer_names = ref<string[]>([]);
 const createForm = ref(null);
 
+const hasFullyLoaded = ref(false);
 
 async function getDevelopers(projectId: string) {
     const { data: user_ids, error } = await supabase
@@ -200,8 +202,7 @@ async function getProjects() {
         isLoading.value = false;
         selectedProject.value = projects.value[0];
     }
-
-    await getUserStories();
+    await getCurrentSprint();
 }
 
 async function getCurrentSprint() {
@@ -214,21 +215,21 @@ async function getCurrentSprint() {
         console.error('Error fetching sprints');
     } else {
         if (data) {
-            data.forEach((sprint) => {
+            for (const sprint of data) {
                 if (new Date(sprint.start_date) < currentDate && new Date(sprint.end_date) > currentDate) {
-                    hasCurrentSprint.value = true;
+                    noActiveSprint.value = false;
                     currentSprint.value = sprint;
+
+                    await getUserStories();
                     return;
                 }
-            })
+            }
+            noActiveSprint.value = true;
         }
     }
 }
 
 async function getUserStories() {
-    hasCurrentSprint.value = false;
-    await getCurrentSprint();
-
     if (currentSprint.value.id == "") {
         hasNoUserStories.value = true;
         return;
@@ -247,6 +248,8 @@ async function getUserStories() {
             await getSubtasks(userStory);
         });
         await getDevelopers(selectedProject.value.id);
+
+        hasFullyLoaded.value = true;
     }
 }
 
@@ -314,14 +317,15 @@ async function createSubtask() {
             console.error('Error creating subtask');
         } else {
             successfullyCreatedSubtask.value = true;
-            
+
             setTimeout(() => {
                 showDialog.value = false;
                 subtask.value.description = '';
                 subtask.value.time = '';
                 subtask.value.developer = '';
             }, 1000);
-            await getSubtasks(subtask.value);
+
+            await getUserStories();
         }
     }
 }
