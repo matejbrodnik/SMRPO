@@ -8,6 +8,7 @@
             </v-select>
             <div style="padding: 30px 0;">
                 <div v-if="noActiveSprint">There is no active sprint for this project.</div>
+                <div v-else-if="fetchingData">Getting user stories...</div>
                 <div v-else>
                     <b>Sprint data</b>
                     <div>Name: {{ currentSprint.name }}</div>
@@ -75,7 +76,7 @@
                                     </tbody>
                                 </v-table>
                             </v-card>
-
+                            
                             <v-dialog v-model="showDialog" style="max-width: 800px;">
                                 <v-card>
                                     <v-card-title>User story: <b>{{ storyName }}</b></v-card-title>
@@ -85,19 +86,19 @@
                                             Subtask created successfully!
                                         </v-alert>
                                         <v-text-field style="margin: 20px;" v-model="subtask.description"
-                                            label="Description" :rules="checkRules('Description')"></v-text-field>
+                                        label="Description" :rules="checkRules('Description')"></v-text-field>
                                         <v-text-field :rules="checkRules('Duration', true)" style="margin: 20px;"
                                             v-model="subtask.time" label="Duration in hours"></v-text-field>
-                                        <v-select style="margin: 20px;" v-model="subtask.developer"
+                                            <v-select style="margin: 20px;" v-model="subtask.developer"
                                             :items="developer_names" label="Suggested developer"
                                             :rules="checkRules('Developer')"></v-select>
-                                    </v-form>
-                                    <v-card-actions>
-                                        <v-btn style="margin: 10px;" class="bg-deep-purple"
+                                        </v-form>
+                                        <v-card-actions>
+                                            <v-btn style="margin: 10px;" class="bg-deep-purple"
                                             @click="createSubtask">Create</v-btn>
-                                        <v-spacer></v-spacer>
-                                        <v-btn @click="showDialog = false">Close</v-btn>
-                                    </v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn @click="showDialog = false">Close</v-btn>
+                                        </v-card-actions>
                                 </v-card>
                             </v-dialog>
                         </div>
@@ -159,7 +160,7 @@ const subtask = ref({
 const developer_names = ref<string[]>([]);
 const createForm = ref(null);
 
-const hasFullyLoaded = ref(false);
+const fetchingData = ref(false);
 
 async function getDevelopers(projectId: string) {
     const { data: user_ids, error } = await supabase
@@ -217,10 +218,14 @@ async function getCurrentSprint() {
         if (data) {
             for (const sprint of data) {
                 if (new Date(sprint.start_date) < currentDate && new Date(sprint.end_date) > currentDate) {
-                    noActiveSprint.value = false;
                     currentSprint.value = sprint;
-
+                    noActiveSprint.value = false;
+                    fetchingData.value = true;
+                    
+                    await getDevelopers(selectedProject.value.id);
                     await getUserStories();
+                    
+                    fetchingData.value = false;
                     return;
                 }
             }
@@ -230,6 +235,7 @@ async function getCurrentSprint() {
 }
 
 async function getUserStories() {
+    
     if (currentSprint.value.id == "") {
         hasNoUserStories.value = true;
         return;
@@ -244,12 +250,9 @@ async function getUserStories() {
         console.error('Error fetching user stories');
     } else {
         userStories.value = data;
-        userStories.value.forEach(async (userStory: any) => {
-            await getSubtasks(userStory);
-        });
-        await getDevelopers(selectedProject.value.id);
-
-        hasFullyLoaded.value = true;
+        for (const story of userStories.value){
+            await getSubtasks(story)
+        }
     }
 }
 
@@ -261,7 +264,6 @@ async function getSubtasks(userStory: any) {
     if (error) {
         console.error('Error fetching subtasks');
     } else {
-        // Sum hours of estimated_time
         userStory.subtasks = data;
         const timeSum = ref(0);
         for (const subtask of userStory.subtasks) {
