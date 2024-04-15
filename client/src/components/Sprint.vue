@@ -20,19 +20,19 @@
 
                 </v-col>
                 <v-col cols="7">
-                  <v-text-field v-model="sprintData.name" label="Name" required></v-text-field>
+                  <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.name" label="Name" required></v-text-field>
                 </v-col>
                 
                 <v-divider></v-divider>
                 <v-col cols="3">
-                  <v-text-field v-model="sprintData.duration" label="Duration (pts.)" required></v-text-field>
+                  <v-text-field :disabled="canEditDuration == 1" v-model="sprintData.duration" label="Duration (pts.)" required></v-text-field>
                 </v-col>
                 <v-divider></v-divider>
                 <v-col cols="4">
                   <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
                     transition="scale-transition" offset-y min-width="290px">
                     <template v-slot:activator="{ on, attrs }">
-                    <v-text-field v-model="sprintData.start_date" @click="showDatePickerStart = true" label="Start date"
+                    <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.start_date" @click="showDatePickerStart = true" label="Start date"
                       prepend-icon="mdi-calendar" v-bind="attrs"
                         v-on="on"></v-text-field>
 
@@ -49,7 +49,7 @@
                   <v-menu v-model="showDatePickerEnd" :close-on-content-click="false" :nudge-right="40"
                     transition="scale-transition" offset-y min-width="290px">
                     <template v-slot:activator="{ on, attrs }">
-                  <v-text-field v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
+                  <v-text-field  :disabled="canEditSprint == 1" v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
                     prepend-icon="mdi-calendar" v-bind="attrs"
                         v-on="on"></v-text-field>
 
@@ -64,8 +64,8 @@
             <v-divider></v-divider>
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn text="Close" variant="text" @click="showSprintEditDlg = false"></v-btn>
-              <v-btn text="Save" variant="text" @click="editSprint"></v-btn>
+              <v-btn text="Close" variant="text" @click="showSprintEditDlg = false; resetFormAndCloseDialog()"></v-btn>
+              <v-btn :disabled="canEditDuration == 1" text="Save" variant="text" @click="editSprint"></v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -89,7 +89,8 @@ onMounted(() => {
 });
 
 
-
+var canEditSprint = ref(1);
+var canEditDuration = ref(1);
 
 const isAdmin = ref(false);
 const canEdit = ref(false);
@@ -148,16 +149,18 @@ const sprintData = ref({
   id: '',
   name: '',
   duration: '',
-  start_date: ref([]),
-  end_date: ref([]),
+  start_date: '',
+  end_date: '',
 });
 
 const resetFormAndCloseDialog = () => {
+  canEditDuration.value = 1;
+  canEditSprint.value = 1;
   sprintData.value = {
     name: '',
     duration: '',
-    startDate: ref([]),
-    endDate: ref([]),
+    startDate: '',
+    endDate: '',
     project_id: '',
     id: '',
   }; // Reset form data
@@ -243,10 +246,30 @@ async function editSprint() {
 
 const showSprintEdit = (click, item) => {
   if (!canEdit.value) return;
+  // test if it's current sprint - we can only edit the duration 
+  // if it's a future sprint everything is editable 
+  var start_date_details = item.item.start_date.split(" ")[0].split(".");
+  var start_date = new Date(start_date_details[2], start_date_details[1]-1, start_date_details[0]);
+  var end_date_details = item.item.end_date.split(" ")[0].split(".");
+  var end_date = new Date(end_date_details[2], end_date_details[1]-1, end_date_details[0]);
+  // console.log("Start date ", start_date);
+  // console.log("end date ", end_date);
+  if (start_date > new Date(minDate) && end_date > new Date(minDate)) {
+    // this is future sprint, can edit everything
+    canEditSprint.value = 0;
+    canEditDuration.value = 0;
+  }
+  if (start_date < new Date(minDate) && end_date > new Date(minDate)) {
+    // current sprint, can only edit duration
+    // console.log("current sprint ");
+    canEditDuration.value = 0;
+  }
   sprintData.value.name = item.item.name;
   sprintData.value.id = item.item.id;
   sprintData.value.project_id = item.item.project_id;
   sprintData.value.duration = item.item.duration;
+  sprintData.value.end_date = end_date.toDateString();
+  sprintData.value.start_date = start_date.toDateString();
   showSprintEditDlg.value = true;
 };
 
@@ -283,6 +306,7 @@ const validateWeekend = (date) => {
 
 const validateSprintDates = () => {
   showSprintError.value = true;
+  console.log(sprintData);
   if (!validateWeekend(sprintData.value.start_date) || !validateWeekend(sprintData.value.end_date)) {
     showSprintError.value = true;
     return false;
@@ -293,6 +317,10 @@ const validateSprintDates = () => {
     return false;
   }
   if (new Date(sprintData.value.start_date) < new Date(minDate) || new Date(sprintData.value.end_date) < new Date(minDate)) {
+    if (canEditDuration.value == 0) {
+      showSprintError.value = false;
+      return true;
+    }
     showSprintError.value = true;
     return false;
   }
