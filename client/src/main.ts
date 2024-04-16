@@ -1,11 +1,12 @@
 import '@mdi/font/css/materialdesignicons.css'; // ikone
-import { createApp } from 'vue';
+import { createApp, createApp } from 'vue';
 import App from './App.vue';
 import './index.css';
 import './style.css';
 
 // Vuetify
 import '@mdi/font/css/materialdesignicons.css';
+import { VueQueryPlugin } from '@tanstack/vue-query';
 import { jwtDecode } from 'jwt-decode';
 import { createVuetify } from 'vuetify';
 import * as components from 'vuetify/components';
@@ -33,4 +34,4 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-createApp(App).use(vuetify).use(router).use(store).mount('#app');
+createApp(App).use(vuetify).use(router).use(store).use(VueQueryPlugin).mount('#app');
