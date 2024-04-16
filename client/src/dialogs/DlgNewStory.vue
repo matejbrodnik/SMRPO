@@ -2,12 +2,26 @@
   <v-dialog v-model="show" class="dlgWindow" width="50%">
     <v-card>
       <v-card-title>
-        <p style="text-align:left;">
+        <v-row>
+          <v-col cols="10">
+            <p style="text-align:left;">
           {{ edit ? dlgData.name : 'New user story' }}
           <!-- <span style="float:right;">
             <v-icon>mdi-delete</v-icon>
           </span> -->
-        </p>
+            </p>
+          </v-col>
+          <v-col cols="2">
+            <v-btn v-if="dlgData.comment != ''">Comment&nbsp;
+              <v-icon>mdi-message-text</v-icon>
+              <v-tooltip
+                activator="parent"
+                location="bottom">
+                {{dlgData.comment}}
+              </v-tooltip>
+            </v-btn>
+          </v-col>
+        </v-row>
       </v-card-title>
       <v-form @submit.prevent>
         <v-alert v-if="sameName" type="error">
@@ -66,8 +80,8 @@
         </v-card-text>
         <v-divider></v-divider>
         <v-card-actions>
-          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="completeStory" type="submit" v-if="isOwner && edit">Complete</v-btn>
-          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="rejectStory" type="submit" v-if="isOwner && edit">Reject</v-btn>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="completeStory" type="submit" v-if="isOwner && edit && dlgData.sprint_id != null">Complete</v-btn>
+          <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="rejectStory" type="submit" v-if="isOwner && edit && dlgData.sprint_id != null">Reject</v-btn>
           <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="saveStory" type="submit" :disabled="!isScrum && !isOwner">Save</v-btn>
           <v-btn class="bg-deep-purple" style="margin: 0 0 20px 20px" variant="text" @click="deleteStory" type="submit" v-if="edit" :disabled="!isScrum && !isOwner">Delete</v-btn>
           <v-spacer></v-spacer>
@@ -105,7 +119,8 @@
         work_value: null,
         time: null,
         tests: [{id: 1, description: "# ", is_done: false}],
-        id: 0
+        id: 0,
+        comment: ''
       });
       const checkEmpty = [(value: string) => !!value || 'This field is required'];
       const checkRange = [(value: any) => (/^\d+$/.test(value) && value > 0 && value <= 10) || 'Must be of value 1-10'];

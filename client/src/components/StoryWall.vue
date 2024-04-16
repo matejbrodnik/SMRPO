@@ -127,10 +127,6 @@ export default defineComponent({
 
     const dlgNewStory = ref<any>({});
     const dlgEditStory = ref<any>({});
-      const currentSprint = ref({
-      id: '',
-      name: '',
-    });
 
     onMounted(() => {
       selectedProject.value = props.selectedProject;
@@ -223,7 +219,8 @@ export default defineComponent({
         work_value: null,
         time: null,
         tests: [],
-        id: 0
+        id: 0,
+        comment: ''
       }
       dlgNewStory.value.sameName = false;
       dlgNewStory.value.show = true;
@@ -257,60 +254,33 @@ export default defineComponent({
           .eq('project_id', selectedProject.value.id)
           .order('start_date', { ascending: false })
           .limit(1);
-      if (error) {
-          console.error('Error fetching sprints');
-      } else {
-          currentSprint.value = data[0];
-      }
+      if (error)
+        console.error('Error fetching sprints');
+      else
+        return data[0];
+      
     }
 
     async function addToSprint(items: any) {
-      getCurrentSprint();
+      let sprint = await getCurrentSprint();
       let tmp = items;
       // console.log(items[0])
       // return;
       for(let i = 0; i < tmp.length; i++) {
         if (tmp[i].selected) {
-          items.splice(i, 1);
-          storiesActiveAssigned.value.push(tmp[i].raw)
-
+          //items.splice(i, 1);
+          //storiesActiveAssigned.value.push(tmp[i].raw)
           const {data, error} = await supabase
             .from('user_story')
             .update([{
-              sprint_id: currentSprint.value.id
+              sprint_id: sprint?.id
             }])
             .eq('id', tmp[i].raw.id);
           if(error)
             throw error;
         }
       }
-      // tmp.forEach(async el => {
-      //   if (el.selected) {
-      //     console.log("begin")
-      //     console.log(el.raw)
-      //     console.log(items.indexOf(el.raw))
-      //     console.log(items.length)
-      //     let index = -1;
-      //     for (let i = 0; i < items.length; i++) {
-      //       if (items[i].raw.id == el.raw.id)
-      //         index = i; 
-      //     }
-      //     if (index > -1) {
-      //       items.splice(index, 1)
-      //       storiesActiveAssigned.value.push(el.raw)
-      //     }
-      //     const {data, error} = await supabase
-      //       .from('user_story')
-      //       .update([{
-      //         sprint_id: currentSprint.value.id
-      //       }])
-      //       .eq('id', el.raw.id);
-      
-      //     if(error)
-      //       throw error;
-      //   }
-      // });
-
+      fetchStories();
     }
 
     function updateSelection(items: any, index: number) {
