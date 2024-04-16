@@ -26,9 +26,6 @@ export default defineComponent({
     const storyId = ref(0);
 
     async function rejectStory() {
-      console.log("COMMENT")
-      console.log(comment.value)
-      console.log(storyId.value)
       if (comment.value == "")
         return;
       const {data, error} = await supabase
@@ -44,6 +41,7 @@ export default defineComponent({
           throw error;
       show.value = false;
     }
+    
     return {
       show,
       comment,

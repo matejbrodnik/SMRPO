@@ -40,8 +40,8 @@
               <v-data-iterator :items="dlgData.tests">
               <template v-slot:default="{ items }">
                 <v-row v-for="(item, index) in items" dense>
-                  <!-- <v-checkbox v-model="item.selected"></v-checkbox> -->
-                  <v-text-field v-model="item.raw" label="Acceptance test" @input="updateItem(item, index)" :disabled="!isScrum && !isOwner">
+                  <v-checkbox v-model="item.raw.is_done"></v-checkbox>
+                  <v-text-field v-model="item.raw.description" label="Acceptance test" :disabled="!isScrum && !isOwner">
                   </v-text-field>
                 </v-row>
               </template>
@@ -56,7 +56,7 @@
           </v-row>
           <v-row dense>
             <v-col cols="3">
-              <v-text-field v-model="dlgData.time" label="Time cost" :disabled="!isScrum"  v-if="edit"></v-text-field>
+              <v-text-field v-model="dlgData.time" label="Time cost (pts)" :disabled="!isScrum"  v-if="edit"></v-text-field>
             </v-col>
             <!-- <v-col cols="3">
               <v-select v-model="dlgData.sprint_id" label="Sprint" :items="sprints" item-value="id" item-title="name" :disabled="!isScrum"  v-if="edit"></v-select>
@@ -76,7 +76,7 @@
       </v-form>
     </v-card>
   </v-dialog>
-  <dlg-comment ref="dlgReject"></dlg-comment>
+  <dlg-comment ref="dlgReject" ></dlg-comment>
 </template>
   
   <script lang="ts">
@@ -89,7 +89,11 @@
     components: {
       DlgComment
     },
-    setup() {
+    props: {
+      parentMethod: Function
+    },
+    setup(props) {
+      
       const show = ref(false);
       const edit = ref(false);
       const prio = ref(['Must have', 'Should have', 'Could have', 'Won\'t have this time']);
@@ -100,7 +104,7 @@
         sprints: {id: null, name: ''},
         work_value: null,
         time: null,
-        tests: [],
+        tests: [{id: 1, description: "# ", is_done: false}],
         id: 0
       });
       const checkEmpty = [(value: string) => !!value || 'This field is required'];
@@ -141,7 +145,6 @@
       const saveStory = async () => {
         if(await checkDuplicate()) {//če ime že obstaja, vrne true
           sameName.value = true;
-          console.log("AAAAA")
           return;
         }
         // let properSprint = false;
@@ -155,9 +158,18 @@
         // if (!properSprint) {
         //   return;
         // }
+        let editTests = [];
+        let newTests = [];
+        let storyId = 1;
+        for (let i = 0; i < dlgData.value.tests.length; i++) {
+          if (dlgData.value.tests[i] != "" && dlgData.value.tests[i] != "# ") {
+            if (dlgData.value.tests[i].id == null)
+              newTests.push(dlgData.value.tests[i])
+            else
+              editTests.push(dlgData.value.tests[i])
+          }
+        }
         if (edit.value) {
-          console.log('edit');
-          console.log(dlgData.value);
           if (dlgData.value.state === 'finished') {
             return;
           }
@@ -166,11 +178,7 @@
               return;
             }
           }
-          let tmp = [];
-          for (let i = 0; i < dlgData.value.tests.length; i++) {
-            if (dlgData.value.tests[i] != "" && dlgData.value.tests[i] != "# ")
-              tmp.push(dlgData.value.tests[i])
-          }
+
           const {data, error} = await supabase
             .from('user_story')
             .update([{
@@ -182,19 +190,29 @@
               priority: dlgData.value.priority,
               work_value: dlgData.value.work_value,
               time: dlgData.value.time,
-              tests: tmp
             }])
-            .eq('id', dlgData.value.id);
+            .eq('id', dlgData.value.id)
+            .select('id');
           
           if(error)
             throw error;
+          storyId = data[0].id;
+          editTests.forEach(async element => {
+            const { data: test, error } = await supabase
+              .from('user_story_tests')
+              .upsert([{ 
+                id: element.id,
+                user_story_id: storyId,
+                description: element.description,
+                is_done: element.is_done,
+              }])
+            if (error) {
+              console.error(error);
+              return;
+            }
+          });
         }
         else {
-          let tmp = [];
-          for (let i = 0; i < dlgData.value.tests.length; i++) {
-            if (dlgData.value.tests[i] != "" && dlgData.value.tests[i] != "# ")
-              tmp.push(dlgData.value.tests[i])
-          }
           const {data, error} = await supabase
             .from('user_story')
             .insert([{
@@ -206,12 +224,27 @@
               priority: dlgData.value.priority,
               work_value: dlgData.value.work_value,
               time: dlgData.value.time,
-              tests: tmp
-            }]);
+            }])
+            .select('id');
+
           if(error)
             throw error;
-          console.log(data);
+          storyId = data[0].id;
         }
+        newTests.forEach(async element => {
+          const { data: test, error } = await supabase
+            .from('user_story_tests')
+            .insert([{ 
+              user_story_id: storyId,
+              description: element.description,
+              is_done: element.is_done,
+            }]);
+          if (error) {
+            console.error(error);
+            return;
+          }
+        });
+        props.parentMethod?.();
         show.value = false;
       }
 
@@ -235,19 +268,34 @@
           .eq('id', dlgData.value.id);
           if(error)
             throw error;
-          show.value = false;
+        show.value = false;
+        props.parentMethod?.();
+
       }
 
       function addNewTest(){
-        dlgData.value.tests.push('# '); 
+        dlgData.value.tests.push({description: '# ', is_done: false}); 
       }
 
-      function updateItem(item: any, index: number){
-        dlgData.value.tests[index] = item.raw;
-      }
+      // function updateItem(item: any, index: number){
+      //   dlgData.value.tests[index] = item.raw.txt;
+      //   console.log(dlgData.value.tests);
+      // }
 
-      function completeStory(){
+      async function completeStory(){
         console.log(dlgData.value.tests)
+        if (dlgData.value.tests.every((item: any) => item.is_done)) {
+          const { error } = await supabase
+            .from('user_story')
+            .update([{
+              state: "finished"
+            }])
+            .eq('id', dlgData.value.id);
+            if(error)
+              throw error;
+            show.value = false;
+        }
+
       }
 
       function rejectStory(){
@@ -264,7 +312,6 @@
         dlgData,
         sprints,
         addNewTest,
-        updateItem,
         checkEmpty,
         checkRange,
         sameName,

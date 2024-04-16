@@ -23,8 +23,8 @@
       
   
     </v-data-iterator>
-    <dlg-new-story ref="dlgNewStory"></dlg-new-story>
-  <dlg-new-story ref="dlgEditStory"></dlg-new-story>
+    <dlg-new-story ref="dlgNewStory" :parentMethod="fetchStories"></dlg-new-story>
+  <dlg-new-story ref="dlgEditStory" :parentMethod="fetchStories"></dlg-new-story>
   </div>
 
   <v-divider></v-divider>
@@ -102,7 +102,7 @@
   <v-btn style="margin-top: 20px;" @click="newStory" class="dlgButton" :disabled="!isScrum && !isOwner">New user story</v-btn>
 </template>
 <script lang="ts">
-import { defineComponent, ref, onMounted, watch } from 'vue';
+import { defineComponent, ref, onMounted, watch, getCurrentInstance } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import DlgNewStory from '../dialogs/DlgNewStory.vue';
 import { ClickOutside } from 'vuetify/directives';
@@ -134,9 +134,8 @@ export default defineComponent({
 
     onMounted(() => {
       selectedProject.value = props.selectedProject;
-      if (selectedProject.value.id){
+      if (selectedProject.value.id) {
         fetchStories();
-        getCurrentSprint();
       }
     });
 
@@ -189,6 +188,28 @@ export default defineComponent({
       }
     }
 
+    async function fetchStoriesTests(edit: boolean) {
+      const { data, error } = await supabase
+        .from('user_stories_tests')
+        .select('description, is_done')
+        .eq('project_id', selectedProject.value.id)
+        .eq('user_id', userId.value);
+      if (error) {
+        console.error(error);
+        return;
+      }
+      if (edit) {
+        dlgEditStory.value.dlgData.tests = data
+        console.log("data")
+        console.log(data)
+      }
+      else {
+        dlgNewStory.value.dlgData.tests = data
+        console.log("data")
+        console.log(data)
+      }
+    }
+
     function newStory() {
       dlgNewStory.value.isScrum = isScrum.value;
       dlgNewStory.value.isOwner = isOwner.value;
@@ -208,14 +229,24 @@ export default defineComponent({
       dlgNewStory.value.show = true;
     }
 
-    function editStory(item: any, event) {
+    async function editStory(item: any, event) {
       if (event.ctrlKey)
         return;
+      const { data, error } = await supabase
+        .from('user_story_tests')
+        .select('id, description, is_done')
+        .eq('user_story_id', item.raw.id);
+      if (error) {
+        console.error(error);
+        return;
+      }
+
       dlgEditStory.value.isScrum = isScrum.value;
       dlgEditStory.value.isOwner = isOwner.value;
       dlgEditStory.value.dlgData = item.raw;
       dlgEditStory.value.edit = true;
       dlgEditStory.value.currentProjectId = selectedProject.value.id;
+      dlgEditStory.value.dlgData.tests = data
       dlgEditStory.value.show = true;
     }
 
@@ -234,34 +265,51 @@ export default defineComponent({
     }
 
     async function addToSprint(items: any) {
+      getCurrentSprint();
       let tmp = items;
       // console.log(items[0])
       // return;
-      tmp.forEach(async el => {
-        if (el.selected) {
-          // console.log(el.raw)
-          // console.log(items.indexOf(el.raw))
-          // console.log(items.length)
-          // let index = -1;
-          // for (let i = 0; i < items.length; i++) {
-          //   if (items[i].raw.id == el.raw.id)
-          //     index = i;
-          // }
-          // if (index > -1){
-          //   items.splice(index, 1)
-          //   storiesActiveAssigned.value.push(el.raw)
-          // }
+      for(let i = 0; i < tmp.length; i++) {
+        if (tmp[i].selected) {
+          items.splice(i, 1);
+          storiesActiveAssigned.value.push(tmp[i].raw)
+
           const {data, error} = await supabase
             .from('user_story')
             .update([{
               sprint_id: currentSprint.value.id
             }])
-            .eq('id', el.raw.id);
-      
+            .eq('id', tmp[i].raw.id);
           if(error)
             throw error;
         }
-      });
+      }
+      // tmp.forEach(async el => {
+      //   if (el.selected) {
+      //     console.log("begin")
+      //     console.log(el.raw)
+      //     console.log(items.indexOf(el.raw))
+      //     console.log(items.length)
+      //     let index = -1;
+      //     for (let i = 0; i < items.length; i++) {
+      //       if (items[i].raw.id == el.raw.id)
+      //         index = i; 
+      //     }
+      //     if (index > -1) {
+      //       items.splice(index, 1)
+      //       storiesActiveAssigned.value.push(el.raw)
+      //     }
+      //     const {data, error} = await supabase
+      //       .from('user_story')
+      //       .update([{
+      //         sprint_id: currentSprint.value.id
+      //       }])
+      //       .eq('id', el.raw.id);
+      
+      //     if(error)
+      //       throw error;
+      //   }
+      // });
 
     }
 
@@ -301,7 +349,8 @@ export default defineComponent({
       newStory,
       editStory,
       addToSprint,
-      updateSelection
+      updateSelection,
+      fetchStories
     };
   },
 });
