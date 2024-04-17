@@ -334,7 +334,7 @@ export default defineComponent({
   white-space: pre-wrap;
 }
 .selected {
-  background-color: #e7e7e7;
-  box-shadow:inset 1px 1px 3px 3px #d9d9f0;
+  background-color: #e0e0e0;
+  box-shadow:inset 1px 1px 3px 3px #d7d7ee;
 }
 </style>

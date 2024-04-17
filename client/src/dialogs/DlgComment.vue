@@ -20,7 +20,10 @@ import { defineComponent, ref, onMounted, watch } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 
 export default defineComponent({
-  setup() {
+  props: {
+      parentMethod: Function
+    },
+  setup(props) {
     const show = ref(false);
     const comment = ref("");
     const storyId = ref(0);
@@ -39,6 +42,7 @@ export default defineComponent({
         
         if(error)
           throw error;
+      props.parentMethod?.();
       show.value = false;
     }
     

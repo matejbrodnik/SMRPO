@@ -90,7 +90,7 @@
       </v-form>
     </v-card>
   </v-dialog>
-  <dlg-comment ref="dlgReject" ></dlg-comment>
+  <dlg-comment ref="dlgReject" :parentMethod="fetchStories"></dlg-comment>
 </template>
   
   <script lang="ts">
@@ -259,8 +259,12 @@
             return;
           }
         });
-        props.parentMethod?.();
+        fetchStories();
         show.value = false;
+      }
+
+      async function fetchStories() {
+        props.parentMethod?.();
       }
 
       async function checkDuplicate() {
@@ -278,14 +282,19 @@
       async function deleteStory() {
         console.log(dlgData.value.id);
         const { error } = await supabase
+          .from('user_story_tests')
+          .delete()
+          .eq('user_story_id', dlgData.value.id);
+          if(error)
+            throw error;
+        const { error: error1 } = await supabase
           .from('user_story')
           .delete()
           .eq('id', dlgData.value.id);
-          if(error)
-            throw error;
+          if(error1)
+            throw error1;
         show.value = false;
-        props.parentMethod?.();
-
+        fetchStories();
       }
 
       function addNewTest(){
@@ -308,6 +317,7 @@
             .eq('id', dlgData.value.id);
             if(error)
               throw error;
+            fetchStories();
             show.value = false;
         }
 
@@ -335,6 +345,7 @@
         deleteStory,
         completeStory,
         rejectStory,
+        fetchStories,
         dlgReject
       };
     },
