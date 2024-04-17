@@ -63,6 +63,7 @@
                       <td>
                         <v-checkbox
                           v-model="subtask.is_done"
+                          :disabled="subtask.assigned_developer_id !== user_profile_id.valueOf()"
                           @update:model-value="changeSubtaskDone(subtask)">
                         </v-checkbox>
                       </td>
@@ -79,9 +80,16 @@
                       </td>
                       <td>
                         <v-btn
+                          color="green"
                           v-if="checkTaskCanBeAccepted && !subtask.assigned_developer_id"
                           @click="acceptSubtask(subtask)"
                           >Accept</v-btn
+                        >
+                        <v-btn
+                          color="red"
+                          v-if="subtask.assigned_developer_id === user_profile_id.valueOf()"
+                          @click="rejectSubtask(subtask)"
+                          >Reject</v-btn
                         >
                       </td>
                     </tr>
@@ -151,7 +159,18 @@ import { onMounted, ref, watch } from 'vue';
 import { formatDate } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
 
-onMounted(() => {
+const user_profile_id = ref('');
+
+onMounted(async () => {
+  const user = (await supabase.auth.getUser()).data.user;
+  const userId = user.id;
+  let { data: profile, error } = await supabase
+    .from('user_profile')
+    .select('*')
+    .eq('user_id', userId);
+  user_profile_id.value = profile[0].id;
+  console.log('User profile id:', user_profile_id.value);
+
   getProjects();
 });
 
@@ -422,6 +441,20 @@ async function acceptSubtask(subtask: any) {
       console.log('Subtask accepted');
       await getUserStories();
     }
+  }
+}
+
+async function rejectSubtask(subtask: any) {
+  console.log('Rejecting subtask', subtask);
+  const { error } = await supabase
+    .from('subtasks')
+    .update({ assigned_developer_id: null })
+    .eq('id', subtask.id);
+  if (error) {
+    console.error('Error rejecting subtask');
+  } else {
+    console.log('Subtask rejected');
+    await getUserStories();
   }
 }
 
