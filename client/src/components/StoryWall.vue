@@ -2,13 +2,12 @@
   <div>
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
-        <v-text-field>Active, assigned user stories
+        <v-text-field>Active user stories | Sprint velocity: {{ sprintDuration }} pts | Load: {{ sprintLoad }}
         </v-text-field>
         <v-row style="margin-bottom: 5px;">
           <v-col v-for="(item, index) in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
             <v-card @click="editStory(item, $event)" 
-            :class="{ 'selected': item.selected }"
-            @click.ctrl="updateSelection(items, index)">
+            :class="{ 'error': item.raw.error }">
               <v-card-title class="d-flex align-center">
                 <h4 style="text-align:left;" class="card-title">{{ item.raw.name + " (" + item.raw.priority + ") " }}
                 </h4>
@@ -34,7 +33,7 @@
     item-value="name"
   >
     <template v-slot:default="{ items }">
-      <v-text-field>Active, unassigned user stories
+      <v-text-field>Unfinished user stories
         <v-btn @click="addToSprint(items)" prepend-icon="mdi-plus"  style="margin-left: 10px;" v-if="items.some((el) => el.selected)">
               Add to sprint
         </v-btn>
@@ -80,9 +79,7 @@
           md="3"
           sm="6"
         >
-          <v-card @click="editStory(item, $event)" 
-          :class="{ 'selected': item.selected }"
-          @click.ctrl="updateSelection(items, index)">
+          <v-card @click="editStory(item, $event)">
             <v-card-title class="d-flex align-center">
               <h4>{{ item.raw.name + " (" + item.raw.priority + ") "}} </h4>
             </v-card-title>
@@ -92,11 +89,38 @@
           </v-card>
         </v-col>
       </v-row>
-      
     </template>
-    
   </v-data-iterator>
-  
+  </div>
+  <v-divider></v-divider>
+  <div>
+    <v-data-iterator
+    :items="storiesNext"
+    item-value="name"
+    >
+      <template v-slot:default="{ items }">
+        <v-text-field>Future releases</v-text-field>
+        <v-row style="margin-bottom: 5px;">
+          <v-col
+            v-for="(item, index) in items"
+            :key="item.raw.name"
+            cols="12"
+            lg="3"
+            md="3"
+            sm="6"
+            >
+            <v-card @click="editStory(item, $event)">
+              <v-card-title class="d-flex align-center">
+                <h4>{{ item.raw.name }} </h4>
+              </v-card-title>
+              <v-card-text>
+                {{ item.raw.description }}
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </template>
+    </v-data-iterator>
   </div>
 
   <v-btn style="margin-top: 20px;" @click="newStory" class="dlgButton" :disabled="!isScrum && !isOwner">New user story</v-btn>
@@ -119,11 +143,14 @@ export default defineComponent({
     const search = ref('');
     const storiesActiveAssigned = ref<any[]>([]);
     const storiesFinished = ref<any[]>([]);
+    const storiesNext = ref<any[]>([]);
     const storiesActiveUnassigned = ref<any[]>([]);
     const selectedProject = ref<any>({});
     const userId = ref('');
     const isScrum = ref(false);
     const isOwner = ref(false);
+    const sprintDuration = ref(0);
+    const sprintLoad = ref(0);
 
     const dlgNewStory = ref<any>({});
     const dlgEditStory = ref<any>({});
@@ -132,12 +159,14 @@ export default defineComponent({
       selectedProject.value = props.selectedProject;
       if (selectedProject.value.id) {
         fetchStories();
+        getCurrentSprint();
       }
     });
 
     async function fetchStories() {
       storiesActiveAssigned.value = [];
       storiesFinished.value = [];
+      storiesNext.value = [];
       storiesActiveUnassigned.value = [];
       isScrum.value = false;
       isOwner.value = false;
@@ -152,15 +181,18 @@ export default defineComponent({
         return;
       } else {
         console.log(projects);
+        sprintLoad.value = 0;
         projects.forEach(project => {
           project.user_story.forEach(story => {
             if (story.state !== 'finished') {
-              if (story.sprint_id === null)
+              if (story.priority == 'Won\'t have this time')
+                storiesNext.value.push(story)
+              else if (story.sprint_id === null)
                 storiesActiveUnassigned.value.push(story);
               else {
+                sprintLoad.value += story.time;
                 storiesActiveAssigned.value.push(story);
               }
-
             } else {
               storiesFinished.value.push(story);
             }
@@ -207,6 +239,7 @@ export default defineComponent({
     }
 
     function newStory() {
+      console.log(storiesNext.value)
       dlgNewStory.value.isScrum = isScrum.value;
       dlgNewStory.value.isOwner = isOwner.value;
       dlgNewStory.value.edit = false;
@@ -248,39 +281,49 @@ export default defineComponent({
     }
 
     async function getCurrentSprint() {
+      console.log("AAAAAAAAA");
+      console.log(selectedProject.value.id);
       const { data, error } = await supabase
           .from('sprints')
-          .select('id, name')
+          .select('id, name, duration')
           .eq('project_id', selectedProject.value.id)
           .order('start_date', { ascending: false })
           .limit(1);
       if (error)
         console.error('Error fetching sprints');
-      else
+      else if (data.length > 0) {
+        sprintDuration.value = data[0].duration;
         return data[0];
-      
+      }
     }
 
     async function addToSprint(items: any) {
       let sprint = await getCurrentSprint();
-      let tmp = items;
-      // console.log(items[0])
-      // return;
-      for(let i = 0; i < tmp.length; i++) {
-        if (tmp[i].selected) {
-          //items.splice(i, 1);
-          //storiesActiveAssigned.value.push(tmp[i].raw)
+      let tmp: any[] = [];
+      for(let i = 0; i < items.length; i++) {
+        if (items[i].selected && items[i].raw.time != null) {
+          if (items[i].raw.time + sprintLoad.value > sprintDuration.value) {
+            items[i].raw.error = true;
+            tmp.push(items[i].raw)
+            continue;
+          }
           const {data, error} = await supabase
             .from('user_story')
             .update([{
               sprint_id: sprint?.id
             }])
-            .eq('id', tmp[i].raw.id);
+            .eq('id', items[i].raw.id);
           if(error)
             throw error;
         }
       }
-      fetchStories();
+      await fetchStories();
+      tmp.forEach((element: any) => {
+        storiesActiveAssigned.value.push(element);
+        sprintLoad.value += element.time;
+        console.log(sprintLoad.value);
+        console.log(element);
+      });
     }
 
     function updateSelection(items: any, index: number) {
@@ -289,9 +332,13 @@ export default defineComponent({
     }
 
     watch(() => props.selectedProject, async (newVal) => {
+      console.log("WATCH");
+      console.log(selectedProject.value);
+      console.log(newVal);
       selectedProject.value = newVal;
       if (selectedProject.value.id) {
         fetchStories();
+        getCurrentSprint();
       }
     });
 
@@ -313,6 +360,7 @@ export default defineComponent({
       search,
       storiesActiveAssigned,
       storiesFinished,
+      storiesNext,
       storiesActiveUnassigned,
       dlgEditStory,
       dlgNewStory,
@@ -320,7 +368,9 @@ export default defineComponent({
       editStory,
       addToSprint,
       updateSelection,
-      fetchStories
+      fetchStories,
+      sprintDuration,
+      sprintLoad,
     };
   },
 });
@@ -336,5 +386,8 @@ export default defineComponent({
 .selected {
   background-color: #e0e0e0;
   box-shadow:inset 1px 1px 3px 3px #d7d7ee;
+}
+.error {
+  background-color: #ee4444;
 }
 </style>
