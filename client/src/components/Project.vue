@@ -1,5 +1,5 @@
 <template>
-  <div style="height: 100vh; overflow: hidden;">
+  <div style="height: 100vh;">
     <div style="margin: 30px auto; max-width: 80%;">
       <v-btn class="bg-deep-purple" theme="dark" style="margin: 30px 0;" v-if="isAdmin" @click="openModal">
         New project
@@ -25,7 +25,7 @@
                 :rules="checkEmpty('Description')"></v-textarea>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="productOwner" :items="user_names" label="Product Owner"
+                  <v-select v-model="productOwner" :items="user_names" :item-props="user_ids" label="Product Owner"
                     :rules="checkEmpty('Product Owner')">
                   </v-select>
                 </v-col>
@@ -72,20 +72,20 @@
                 label="Describe this project"></v-textarea>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.productOwner" :items="user_names" label="Product Owner"
+                  <v-select v-model="selectedProject.productOwner.name" :items="user_names" label="Product Owner"
                     :rules="checkEmpty('Product Owner')">
                   </v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.scrumMaster" :items="user_names" item-text="name" item-value="id"
+                  <v-select v-model="selectedProject.scrumMaster.name" :items="user_names" item-text="name" item-value="id"
                     label="Scrum Master" :rules="checkEmpty('Scrum Master')"></v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.developers" :items="user_names" item-text="name" item-value="id"
+                  <v-select v-model="selectedProject.developers.devs" :items="user_names" item-text="name" item-value="id"
                     label="Developers" multiple :rules="checkEmpty('Developers', true)"></v-select>
                 </v-col>
               </v-row>
@@ -94,7 +94,7 @@
           <v-card-actions>
             <v-btn class="bg-deep-purple" @click="updateProject" style="margin: 0 0 20px 20px">Update</v-btn>
             <v-btn class="bg-deep-purple" @click="showSprintCreate = true" style="margin: 0 0 20px 20px">Create new
-            sprint</v-btn>
+              sprint</v-btn>
             <v-spacer></v-spacer>
             <v-btn @click="isEditModalOpen = false, editProjectAlert = false"
               style="margin: 0 20px 20px 0">Close</v-btn>
@@ -167,7 +167,8 @@
       </v-dialog>
 
       <div v-if="isLoading">Loading...</div>
-      <v-data-table style="margin: auto;" v-else :headers="headers" :items="items" show-expand @expanded="getProjectRoles">
+      <v-data-table style="margin: auto;" v-else :headers="headers" :items="items" show-expand
+        @expanded="getProjectRoles">
         <template v-slot:item.action="{ item }">
           <v-btn v-if="canEdit" class="bg-deep-purple" size="30" @click="openEditModal(item)">
             <v-icon size="medium20">mdi-pencil</v-icon>
@@ -176,17 +177,17 @@
         <template v-slot:expanded-row="{ columns, item }">
           <tr>
             <td :colspan="columns.length">
-              Product Owner: <b>{{ item.productOwner }}</b>
+              Product Owner: <b>{{ item.productOwner.name }}</b>
             </td>
           </tr>
           <tr>
             <td :colspan="columns.length">
-              Scrum Master: <b>{{ item.scrumMaster }}</b>
+              Scrum Master: <b>{{ item.scrumMaster.name }}</b>
             </td>
           </tr>
           <tr>
             <td :colspan="columns.length">
-                Developers: <b>{{ item.developers.join(', ') }}</b>
+              Developers: <b>{{ item.developers.devs.join(', ') }}</b>
             </td>
           </tr>
           <tr>
@@ -228,6 +229,7 @@ const items = ref<any[]>([]);
 const currentProjectId = ref(0);
 
 const user_names = ref<string[]>([]);
+const user_ids = ref<string[]>([]);
 
 const createForm = ref(null);
 const updateForm = ref(null);
@@ -287,14 +289,14 @@ async function getUserRoles(projectId: number, project: any) {
         const fullName = `${userProfile.name} ${userProfile.surname}`;
         switch (role.role) {
           case 'product_owner':
-            project.productOwner = fullName;
+            project.productOwner = { name: fullName, user_id: role.user_id };
             break;
-          case 'scrum_master':
-            project.scrumMaster = fullName;
-            break;
-          case 'developer':
-            project.developers = project.developers || [];
-            project.developers.push(fullName);
+            case 'scrum_master':
+              project.scrumMaster = { name: fullName, user_id: role.user_id };
+              break;
+              case 'developer':
+                project.developers = project.developers || [];
+                project.developers.push({ name: fullName, user_id: role.user_id });
             break;
           default:
             // Handle any other roles or ignore
@@ -489,7 +491,7 @@ const countWeekdays = (startDate, endDate) => {
 }
 
 async function checkScrumMaster(userId: any) {
-  const {data, error} = await supabase
+  const { data, error } = await supabase
     .from('project_role')
     .select('role')
     .eq('user_id', userId)
@@ -521,32 +523,38 @@ async function getProjects() {
       item.created_at = formatDateTime(item.created_at);
     });
 
-    isLoading.value = false;
-  }
 
+    for (const item of items.value) {
+      const { project, isSuccessful } = await getUserRoles(item.id, item);
 
-  for (const item of items.value) {
-    const { project, isSuccessful } = await getUserRoles(item.id, item);
-
-    if (isSuccessful) {
-      item.productOwner = project.productOwner;
-      item.scrumMaster = project.scrumMaster;
-      item.developers = project.developers;
+      if (isSuccessful) {
+        if (project.productOwner && project.scrumMaster && project.developers) {
+          item.productOwner = { name: project.productOwner.name, user_id: project.productOwner.user_id };
+          item.scrumMaster = { name: project.scrumMaster.name, user_id: project.scrumMaster.user_id };
+          item.developers = {
+            devs: project.developers.map((dev: any) => dev.name),
+            user_id: project.developers.map((dev: any) => dev.user_id)
+          };
+        }
+      }
     }
+    isLoading.value = false;
   }
 }
 
 async function getUsers() {
   const { data, error } = await supabase
     .from('user_profile')
-    .select('id, name, surname');
+    .select('user_id, id, name, surname');
 
   if (error) {
     console.error("Error fetching users")
   } else {
     users.value = data;
-    data.forEach((element: { name: string, surname: string }) =>
-      user_names.value.push(element.name + " " + element.surname));
+    for (const user of data) {
+      user_names.value.push(user.name + " " + user.surname);
+      user_ids.value.push(user.user_id);
+    }
   }
 }
 
@@ -559,9 +567,12 @@ async function createProject(this: any) {
   if (!formItems.every((item: any) => !!item)) {
     return;
   }
+  if (formItems[3].length === 0) {
+    return;
+  }
   const isFormValid = validateForm(formItems);
   if (!isFormValid) {
-    createProjectAlert.value = true;  
+    createProjectAlert.value = true;
     return;
   }
 
@@ -579,47 +590,33 @@ async function createProject(this: any) {
   if (error) {
     console.error("Error creating project")
   } else {
-    getProjects();
     isModalOpen.value = false;
     const projectId = data[0].id;
 
-    const po = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .eq('name', productOwner.value.split(' ')[0])
-      .eq('surname', productOwner.value.split(' ')[1])
-      .single();
-
-    const sm = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .eq('name', scrumMaster.value.split(' ')[0])
-      .eq('surname', scrumMaster.value.split(' ')[1])
-      .single();
-
-    const devs = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .in('name', developers.value.map((name: string) => name.split(' ')[0]))
-      .in('surname', developers.value.map((name: string) => name.split(' ')[1]));
+    const po = users.value.find((user: any) => user.name + ' ' + user.surname === productOwner.value);
+    const sm = users.value.find((user: any) => user.name + ' ' + user.surname === scrumMaster.value);
+    const devs = users.value.filter((user: any) => developers.value.includes(user.name + ' ' + user.surname));
 
     await supabase
       .from('project_role')
       .insert([
-        { project_id: projectId, user_id: po.data?.user_id, role: 'product_owner' },
-        { project_id: projectId, user_id: sm.data?.user_id, role: 'scrum_master' },
-        ...devs.data?.map((item: { user_id: any }) => ({ project_id: projectId, user_id: item.user_id, role: 'developer' })) || []
+        { project_id: projectId, user_id: po.user_id, role: 'product_owner' },
+        { project_id: projectId, user_id: sm.user_id, role: 'scrum_master' },
+        ...devs.map((item: any) => ({ project_id: projectId, user_id: item.user_id, role: 'developer' }))
       ]);
 
     if (error) {
       console.error("Error creating project role")
     } else {
-      getProjects();
-      setTimeout(() => {
       showProjectSuccessMessage.value = false;
+      items.value.push({
+        id: projectId,
+        name: name.value,
+        description: description.value,
+        created_at: formatDateTime(new Date()),
+      });
       createProjectAlert.value = false;
       isModalOpen.value = false;
-    }, 1000);
     }
   }
 }
@@ -628,7 +625,7 @@ async function updateProject() {
   if (updateForm.value) {
     updateForm.value.validate();
   }
-  const formItems = [selectedProject.value.name, selectedProject.value.productOwner, selectedProject.value.scrumMaster, selectedProject.value.developers];
+  const formItems = [selectedProject.value.name, selectedProject.value.productOwner.name, selectedProject.value.scrumMaster.name, selectedProject.value.developers.devs];
   if (!formItems.every((item: any) => !!item)) {
     return;
   }
@@ -653,26 +650,9 @@ async function updateProject() {
     let scrumMaster = selectedProject.value.scrumMaster
     let developers = selectedProject.value.developers
 
-    const po = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .eq('name', productOwner.split(' ')[0])
-      .eq('surname', productOwner.split(' ')[1])
-      .single();
-
-    const sm = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .eq('name', scrumMaster.split(' ')[0])
-      .eq('surname', scrumMaster.split(' ')[1])
-      .single();
-
-    const devs = await supabase
-      .from('user_profile')
-      .select('user_id')
-      .in('name', developers.map((name: string) => name.split(' ')[0]))
-      .in('surname', developers.map((name: string) => name.split(' ')[1]));
-
+    const po = users.value.find((user: any) => user.name + ' ' + user.surname === productOwner.name);
+    const sm = users.value.find((user: any) => user.name + ' ' + user.surname === scrumMaster.name);
+    const devs = users.value.filter((user: any) => developers.devs.includes(user.name + ' ' + user.surname));
 
     await supabase
       .from('project_role')
@@ -682,11 +662,10 @@ async function updateProject() {
     await supabase
       .from('project_role')
       .insert([
-        { project_id: selectedProject.value.id, user_id: po.data?.user_id, role: 'product_owner' },
-        { project_id: selectedProject.value.id, user_id: sm.data?.user_id, role: 'scrum_master' },
-        ...devs.data?.map((item: { user_id: any }) => ({ project_id: selectedProject.value.id, user_id: item.user_id, role: 'developer' })) || []
+        { project_id: selectedProject.value.id, user_id: po.user_id, role: 'product_owner' },
+        { project_id: selectedProject.value.id, user_id: sm.user_id, role: 'scrum_master' },
+        ...devs.map((item: any ) => ({ project_id: selectedProject.value.id, user_id: item.user_id, role: 'developer' }))
       ]);
-    getProjects();
     setTimeout(() => {
       showProjectSuccessMessage.value = false;
       editProjectAlert.value = false;
