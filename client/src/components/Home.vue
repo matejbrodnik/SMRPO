@@ -46,7 +46,7 @@ const signOut = async () => {
           <v-list-item @click="selected = ProductBacklog" prepend-icon="mdi-file-tree">
             <v-list-title>Product backlog</v-list-title>
           </v-list-item>
-          <v-list-item @click="selected = SprintBacklog" prepend-icon="mdi-invoice-list-outline">
+          <v-list-item @click="selected = SprintBacklog" prepend-icon="mdi-invoice-list-outline" v-if="!isProductOwner">
             <v-list-title>Sprint backlog</v-list-title>
           </v-list-item>
           <!-- <v-btn @click="$refs.dlgUserStory.show = true" class="dlgButton">New user story</v-btn>
@@ -74,13 +74,12 @@ const signOut = async () => {
 </template>
 
 <script lang="ts">
-import { computed, ref } from 'vue';
-import { useStore } from 'vuex';
-import DlgNewStory from '../dialogs/DlgNewStory.vue';
+import { ref } from 'vue';
 import DlgProfile from '../dialogs/DlgProfile.vue';
 import { formatDateTime } from '../lib/dateFormatter';
 
 const profileDlg = ref(false);
+const isProductOwner = ref(false);
 
 const showDialog = () => {
   profileDlg.value = true;
@@ -88,6 +87,22 @@ const showDialog = () => {
 
 const user = await (await supabase.auth.getUser()).data.user;
 
+async function getProjectRole() {
+  const { data } = await supabase
+    .from('project_role')
+    .select('role')
+    .eq('user_id', user?.id)
+
+  if (data) {
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].role === 'product_owner') {
+        isProductOwner.value = true
+        return
+      }
+    }
+  }
+  isProductOwner.value = false
+}
 
 async function getUserName() {
   const { data } = await supabase
@@ -109,6 +124,7 @@ export default {
 
   async mounted() {
     this.userName = await getUserName();
+    await getProjectRole();
   },
 };
 </script>
