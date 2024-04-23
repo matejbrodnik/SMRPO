@@ -187,57 +187,32 @@
                     </v-col>
                     <v-divider></v-divider>
 
-                    <v-col cols="4">
-                      <v-menu
-                        v-model="showDatePickerStart"
-                        :close-on-content-click="false"
-                        :nudge-right="40"
-                        transition="scale-transition"
-                        offset-y
-                        min-width="290px">
-                        <template v-slot:activator="{ on, attrs }">
-                          <v-text-field
-                            v-model="sprintData.start_date"
-                            @click="showDatePickerStart = true"
-                            label="Start date"
-                            prepend-icon="mdi-calendar"
-                            v-bind="attrs"
-                            v-on="on"></v-text-field>
+                    <v-col cols="6">
+                      <!-- <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
+                        transition="scale-transition" offset-y min-width="290px">
+                        <template v-slot:activator="{ on, attrs }"> -->
+                          <v-text-field v-model="sprintData.start_date" @click="showDatePickerStart = true"
+                            label="Start date" prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
 
-                          <v-date-picker
-                            v-model="sprintData.start_date"
-                            @input="showDatePickerStart = false"
-                            v-if="showDatePickerStart"
-                            no-title>
+                          <v-date-picker v-model="sprintData.start_date" :format-locale="de" 
+                            v-if="showDatePickerStart" no-title>
                             <v-spacer></v-spacer>
                           </v-date-picker>
-                        </template>
-                      </v-menu>
+                        <!-- </template>
+                      </v-menu> -->
                     </v-col>
                     <!-- <v-divider></v-divider> -->
-                    <v-col cols="4">
-                      <v-menu
-                        v-model="showDatePickerEnd"
-                        :close-on-content-click="false"
-                        :nudge-right="40"
-                        transition="scale-transition"
-                        offset-y
-                        min-width="290px">
-                        <template v-slot:activator="{ on, attrs }">
-                          <v-text-field
-                            v-model="sprintData.end_date"
-                            @click="showDatePickerEnd = true"
-                            label="End date"
-                            prepend-icon="mdi-calendar"
-                            v-bind="attrs"
-                            v-on="on"></v-text-field>
+                    <v-col cols="6">
+                      <!-- <v-menu v-model="showDatePickerEnd" :close-on-content-click="false" :nudge-right="40"
+                        transition="scale-transition" offset-y min-width="290px"> -->
+                        <!-- <template v-slot:activator="{ on, attrs }"> -->
+                          <v-text-field v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
+                            prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
 
-                          <v-date-picker
-                            v-model="sprintData.end_date"
-                            v-if="showDatePickerEnd"
+                          <v-date-picker v-model="sprintData.end_date" v-if="showDatePickerEnd" @input="showDatePickerEnd = false"
                             no-title></v-date-picker>
-                        </template>
-                      </v-menu>
+                        <!-- </template> -->
+                      <!-- </v-menu> -->
                     </v-col>
                   </v-row>
                 </v-card-text>
