@@ -109,25 +109,38 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
-  <div style="height: 100vh; overflow: hidden">
-    <div style="margin: 30px auto; max-width: 80%">
-      <div v-if="isLoading">Loading...</div>
-      <v-data-table
-        v-else
-        :headers="headers"
-        :items="items"
-        @click:row="showSprintEdit"></v-data-table>
+
+  <div style="margin: 30px auto; max-width: 80%">
+    <div v-if="isLoading">Loading...</div>
+    <v-select
+      v-else
+      v-model="selectedProject"
+      :items="projects"
+      label="Select a project"
+      item-title="name"
+      return-object>
+    </v-select>
+    <div style="height: 100vh; overflow: hidden">
+      <div style="margin: 30px auto">
+        <div v-if="isLoading">Loading...</div>
+        <v-data-table
+          v-else
+          :headers="headers"
+          :items="sprints"
+          @click:row="showSprintEdit"></v-data-table>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watchEffect } from 'vue';
+import { onMounted, ref, watch, watchEffect } from 'vue';
+import { getProjects } from '../functions/helperFunctions';
 import { formatDateTime } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
 
 onMounted(() => {
-  fetchSprints();
+  fetchProjects();
 });
 
 var canEditSprint = ref(1);
@@ -136,6 +149,15 @@ var canEditDuration = ref(1);
 const isAdmin = ref(false);
 const canEdit = ref(false);
 const isScrumMaster = ref(false);
+
+const selectedProject = ref({
+  id: '',
+  name: '',
+  description: '',
+  sprint: '',
+});
+
+watch(selectedProject, fetchSprints);
 
 supabase.auth.onAuthStateChange(async (_, session) => {
   if (session) {
@@ -152,7 +174,6 @@ const headers = ref([
   { title: 'Name', key: 'name' },
   { title: 'Start date', key: 'start_date' },
   { title: 'End date', key: 'end_date' },
-  { title: 'Project', key: 'project_name' },
   { title: 'Duration (pts.)', key: 'duration' },
 ]);
 
@@ -177,7 +198,7 @@ async function checkScrumMaster() {
   }
 }
 
-const items = ref<any[]>([]);
+const sprints = ref<any[]>([]);
 const isLoading = ref(true);
 
 const sprintData = ref({
@@ -214,7 +235,7 @@ const showSuccessMessage = ref(false);
 
 // returns true if there is overlap
 const validateSprint = (sprintData) => {
-  items.value.forEach((item: any) => {
+  sprints.value.forEach((item: any) => {
     if (item.id !== sprintData.id && item.project_id === sprintData.project_id) {
       if (sprintData.start_date >= item.start_date && sprintData.start_date <= item.end_date) {
         sprintOverlap.value = true;
@@ -346,6 +367,18 @@ const validateWeekend = (date) => {
   return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
 };
 
+const projects = ref<any[]>([]);
+
+async function fetchProjects() {
+  const projectsAll = await getProjects();
+  console.log(projectsAll);
+  if (projectsAll) {
+    projects.value = projectsAll;
+    isLoading.value = false;
+    selectedProject.value = projectsAll[0];
+  }
+}
+
 const validateSprintDates = () => {
   showSprintError.value = true;
   console.log(sprintData);
@@ -376,36 +409,23 @@ const validateSprintDates = () => {
 };
 
 async function fetchSprints() {
-  items.value = [];
-  //   const { data, error } = await supabase
-  //     .from('sprints')
-  //     .select('*, project:project_id(*)');
-  const { data, error } = await supabase.from('project').select('id, name, sprints(*)');
+  if (selectedProject.value) {
+    const projectId = selectedProject.value.id;
+    const { data, error } = await supabase.from('sprints').select('*').eq('project_id', projectId);
+    if (error) {
+      console.error('Error fetching sprints:', error.message);
+    } else {
+      sprints.value = data;
+    }
 
-  if (error) {
-    console.error('Error fetching sprints', error);
-  } else {
-    console.log(data);
-    // items.value = data;
-    // items.value.forEach((item: any) => {
-    //   item.start_date = formatDateTime(item.start_date);
-    //   item.end_date = formatDateTime(item.end_date);
-    // });
-    data.forEach((project: any) => {
-      project.sprints.forEach((sprint: any) => {
-        sprint.name = sprint.name;
-        sprint.id = sprint.id;
-        sprint.start_date = formatDateTime(sprint.start_date);
-        sprint.end_date = formatDateTime(sprint.end_date);
-        sprint.project_name = project.name;
-        sprint.project_id = project.id;
-        sprint.duration = sprint.duration;
-        items.value.push(sprint);
-      });
+    sprints.value.forEach((sprint) => {
+      sprint.start_date = formatDateTime(sprint.start_date);
+      sprint.end_date = formatDateTime(sprint.end_date);
+      sprint.project_id = projectId;
     });
-    isLoading.value = false;
   }
 }
+
 watchEffect((isScrumMaster) => {
   canEdit.value = Boolean(isAdmin.value || isScrumMaster);
 });
