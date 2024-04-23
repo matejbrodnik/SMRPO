@@ -31,16 +31,7 @@
               :rules="[rules.required, rules.min]"
               required></v-text-field>
           </v-row>
-          <v-row dense>
-            <v-combobox
-              v-model="dlgData.selectedOrganizations"
-              :items="dlgData.organizations"
-              label="Organizations"
-              :item-title="(item) => item.name"
-              :item-value="(item) => item.name"
-              :rules="[rules.required, rules.organization]"
-              multiple></v-combobox>
-          </v-row>
+
           <v-row>
             <v-radio-group v-model="dlgData.rights" inline label="Sistem rights:" :disabled="false">
               <v-radio label="Administrator" value="admin"></v-radio>
@@ -61,7 +52,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, onMounted, ref } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import { rules } from './DlgProfile.vue';
 
@@ -74,13 +65,10 @@ export default defineComponent({
       surname: '',
       email: '',
       rights: 'user',
-      organizations: [],
-      selectedOrganizations: [],
     });
 
     const form = ref(null);
 
-    const valid = ref(false);
 
     const saveNewUser = async () => {
       const value = await form.value.validate();
@@ -88,15 +76,12 @@ export default defineComponent({
       if (value.valid) {
         // form is valid, proceed with adding new user
         console.log('form is valid');
-        const orgs = dlgData.value.selectedOrganizations.map((item) => item.id);
 
-        console.log('selected organizations', orgs);
         const body = JSON.stringify({
           name: dlgData.value.name,
           email: dlgData.value.email,
           surname: dlgData.value.surname,
           password: dlgData.value.password,
-          organization_ids: orgs,
         });
         console.log('body', body);
 
@@ -115,14 +100,6 @@ export default defineComponent({
         return data;
       }
     };
-
-    const fetchOrganizations = async () => {
-      const { data, error } = await supabase.from('organization').select('*');
-      console.log('organizations', data);
-      dlgData.value.organizations = data;
-    };
-
-    onMounted(fetchOrganizations);
 
     return {
       show,

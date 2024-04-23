@@ -50,11 +50,9 @@ supabase.auth.onAuthStateChange(async (_, session) => {
     }
 });
 async function getProjects() {
-    const organizationId = localStorage.getItem('organizationId');
     const { data, error } = await supabase
         .from('project')
         .select('id, name, description')
-        .eq('organization_id', organizationId);
     if (error) {
         console.error('Error fetching projects');
     } else {

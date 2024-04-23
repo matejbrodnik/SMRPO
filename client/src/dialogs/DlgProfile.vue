@@ -24,7 +24,6 @@
             v-model="dlgData.email"
             label="E-mail"
             :rules="[rules.required, rules.email]"
-            readonly
             required>
           </v-text-field>
         </v-row>
@@ -63,6 +62,8 @@ export default defineComponent({
       password: '',
     });
 
+    const originalEmail = ref('');
+
     const successMessage = ref('');
     const errorMessage = ref('');
 
@@ -85,6 +86,18 @@ export default defineComponent({
           return;
         }
       }
+
+      //await supabase.auth.updateUser({ "e65dc24b0fa76b955fd9bfc9f6a7e8ae90e81807d767e4ffd7cb0290" });
+
+      if (dlgData.value.email !== originalEmail.value) {
+        const { error: emailError } = await supabase.auth.updateUser({
+          email: dlgData.value.email,
+        });
+        if (emailError) {
+          console.log('Error updating email: ', emailError);
+        }
+      }
+
       const { data, error } = await supabase
         .from('user_profile')
         .update({
@@ -109,7 +122,7 @@ export default defineComponent({
     async function fetchProfile() {
       const user = await (await supabase.auth.getUser()).data.user;
       const userId = user.id;
-      const email = user.email;
+      originalEmail.value = user.email;
 
       let { data, error } = await supabase.from('user_profile').select('*').eq('user_id', userId);
       console.log('Profile: ', data);
@@ -119,7 +132,7 @@ export default defineComponent({
         id: data[0].id,
         name: data[0].name,
         surname: data[0].surname,
-        email: email,
+        email: user.email,
       };
     }
 
@@ -163,5 +176,6 @@ export const rules = {
     }
     return value.length >= 8 || 'Min 8 characters';
   },
+  passwordsMatch: (password) => (value) => value === password || 'Passwords do not match',
 };
 </script>
