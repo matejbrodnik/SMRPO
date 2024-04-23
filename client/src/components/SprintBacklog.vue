@@ -87,7 +87,10 @@
                         >
                         <v-btn
                           color="red"
-                          v-if="subtask.assigned_developer_id === user_profile_id.valueOf()"
+                          v-if="
+                            subtask.assigned_developer_id === user_profile_id.valueOf() &&
+                            !subtask.is_done
+                          "
                           @click="rejectSubtask(subtask)"
                           >Reject</v-btn
                         >
@@ -345,27 +348,30 @@ async function getSubtasks(userStory: any) {
     userStory.subtasks = data;
     const timeSum = ref(0);
     for (const subtask of userStory.subtasks) {
-      const { data: assignedDeveloper } = await supabase
-        .from('user_profile')
-        .select('name, surname')
-        .eq('id', subtask.assigned_developer_id)
-        .single();
+      console.log('Subtask:', subtask);
 
-      const { data: developer, error } = await supabase
-        .from('user_profile')
-        .select('name, surname')
-        .eq('id', subtask.developer_id)
-        .single();
-      if (error) {
-        console.error('Error fetching developer');
-      } else {
-        subtask.developer = developer.name + ' ' + developer.surname;
-        subtask.estimated_time = parseFloat(subtask.estimated_time.toFixed(1));
-        if (assignedDeveloper) {
-          subtask.assigned_developer = assignedDeveloper?.name + ' ' + assignedDeveloper?.surname;
-        }
-        timeSum.value += subtask.estimated_time;
+      if (subtask.assigned_developer_id) {
+        const { data: assignedDeveloper } = await supabase
+          .from('user_profile')
+          .select('name, surname')
+          .eq('id', subtask.assigned_developer_id)
+          .single();
+
+        subtask.assigned_developer = assignedDeveloper?.name + ' ' + assignedDeveloper?.surname;
       }
+
+      if (subtask.developer_id) {
+        const { data: developer, error } = await supabase
+          .from('user_profile')
+          .select('name, surname')
+          .eq('id', subtask.developer_id)
+          .single();
+        subtask.developer = developer.name + ' ' + developer.surname;
+      }
+
+      subtask.estimated_time = parseFloat(subtask.estimated_time.toFixed(1));
+
+      timeSum.value += subtask.estimated_time;
     }
     userStory.timeSum = timeSum.value;
   }
