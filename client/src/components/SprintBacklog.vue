@@ -2,77 +2,66 @@
   <div style="height: 100%">
     <div style="margin: 30px auto; max-width: 80%">
       <div v-if="isLoading">Loading...</div>
-      <v-select
-        v-else
-        v-model="selectedProject"
-        :items="projects"
-        label="Select a project"
-        item-title="name"
-        @update:model-value="getCurrentSprint"
-        return-object>
-      </v-select>
-      <div style="padding: 30px 0">
-        <div v-if="noActiveSprint">There is no active sprint for this project.</div>
-        <div v-else-if="fetchingData">Getting user stories...</div>
-        <div v-else>
-          <b>Sprint data</b>
-          <div>Name: {{ currentSprint.name }}</div>
-          <div>
-            Active from {{ formatDate(currentSprint.start_date) }} to
-            {{ formatDate(currentSprint.end_date) }}
-          </div>
-          <div>Velocity: {{ currentSprint.duration }} pts</div>
-          <v-container>
-            <div v-if="hasNoUserStories">This sprint has no user stories assigned.</div>
-            <div v-else>
-              <v-card
-                v-for="(story, index) in userStories"
-                :key="index"
-                color="deep-purple"
-                style="padding: 20px; margin: 30px auto">
-                <v-card-item>
-                  <v-row>
-                    <v-col cols="6">
-                      <v-card-title>{{ story.name }}</v-card-title>
-                    </v-col>
-                    <v-col cols="6" style="display: flex; justify-content: end">
-                      <v-card-actions>
-                        <v-btn size="large" color="white" @click="openDialog(index)"
-                          >+ Add subtask</v-btn
-                        >
-                      </v-card-actions>
-                    </v-col>
-                  </v-row>
-                  <v-card-subtitle>{{ story.description }}</v-card-subtitle>
-                </v-card-item>
-                <v-divider></v-divider>
-                <v-card-text>Priority: {{ story.priority }} </v-card-text>
-                <v-divider></v-divider>
-                <v-table v-if="story.subtasks && story.subtasks.length > 0">
-                  <thead>
-                    <tr>
-                      <th>Done</th>
-                      <th>Description</th>
-                      <th>Suggested developer</th>
-                      <th>Assigned developer</th>
-                      <th>Duration [h]</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="subtask in story.subtasks" :key="subtask.id">
-                      <td>
-                        <v-checkbox
-                          v-model="subtask.is_done"
-                          :disabled="subtask.assigned_developer_id !== user_profile_id.valueOf()"
-                          @update:model-value="changeSubtaskDone(subtask)">
-                        </v-checkbox>
-                      </td>
-                      <td>
-                        {{ subtask.description }}
-                      </td>
-                      <td>
-                        {{ subtask.developer }}
-                      </td>
+      <div v-else>
+        <v-select v-model="selectedProject" :items="projects" label="Select a project" item-title="name"
+          @update:model-value="getCurrentSprint" return-object>
+        </v-select>
+        <div style="padding: 30px 0">
+          <div v-if="noActiveSprint">There is no active sprint for this project.</div>
+          <div v-else-if="fetchingData">Getting user stories...</div>
+          <div v-else>
+            <b>Sprint data</b>
+            <div>Name: {{ currentSprint.name }}</div>
+            <div>
+              Active from {{ formatDate(currentSprint.start_date) }} to
+              {{ formatDate(currentSprint.end_date) }}
+            </div>
+            <div>Velocity: {{ currentSprint.duration }} pts</div>
+            <v-container>
+              <div v-if="hasNoUserStories">This sprint has no user stories assigned.</div>
+              <div v-else>
+                <v-card v-for="(story, index) in userStories" :key="index" color="deep-purple"
+                  style="padding: 20px; margin: 30px auto">
+                  <v-card-item>
+                    <v-row>
+                      <v-col cols="6">
+                        <v-card-title>{{ story.name }}</v-card-title>
+                      </v-col>
+                      <v-col cols="6" style="display: flex; justify-content: end">
+                        <v-card-actions>
+                          <v-btn size="large" color="white" @click="openDialog(index)">+ Add subtask</v-btn>
+                        </v-card-actions>
+                      </v-col>
+                    </v-row>
+                    <v-card-subtitle>{{ story.description }}</v-card-subtitle>
+                  </v-card-item>
+                  <v-divider></v-divider>
+                  <v-card-text>Priority: {{ story.priority }} </v-card-text>
+                  <v-divider></v-divider>
+                  <v-table v-if="story.subtasks && story.subtasks.length > 0">
+                    <thead>
+                      <tr>
+                        <th>Done</th>
+                        <th>Description</th>
+                        <th>Suggested developer</th>
+                        <th>Assigned developer</th>
+                        <th>Duration [h]</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="subtask in story.subtasks" :key="subtask.id">
+                        <td>
+                          <v-checkbox v-model="subtask.is_done"
+                            :disabled="subtask.assigned_developer_id !== user_profile_id.valueOf()"
+                            @update:model-value="changeSubtaskDone(subtask)">
+                          </v-checkbox>
+                        </td>
+                        <td>
+                          {{ subtask.description }}
+                        </td>
+                        <td>
+                          {{ subtask.developer }}
+                        </td>
 
                       <td>{{ subtask.assigned_developer }}</td>
                       <td>
@@ -107,44 +96,31 @@
                 </v-table>
               </v-card>
 
-              <v-dialog v-model="showDialog" style="max-width: 800px">
-                <v-card>
-                  <v-card-title
-                    >User story: <b>{{ storyName }}</b></v-card-title
-                  >
-                  <v-card-subtitle>Add a new subtask</v-card-subtitle>
-                  <v-form ref="createForm">
-                    <v-alert v-if="successfullyCreatedSubtask" type="success">
-                      Subtask created successfully!
-                    </v-alert>
-                    <v-text-field
-                      style="margin: 20px"
-                      v-model="subtask.description"
-                      label="Description"
-                      :rules="checkRules('Description')"></v-text-field>
-                    <v-text-field
-                      :rules="checkRules('Duration', true)"
-                      style="margin: 20px"
-                      v-model="subtask.time"
-                      label="Duration in hours"></v-text-field>
-                    <v-select
-                      style="margin: 20px"
-                      v-model="subtask.developer"
-                      :items="developer_names"
-                      label="Suggested developer"
-                      :rules="checkRules('Developer')"></v-select>
-                  </v-form>
-                  <v-card-actions>
-                    <v-btn style="margin: 10px" class="bg-deep-purple" @click="createSubtask"
-                      >Create</v-btn
-                    >
-                    <v-spacer></v-spacer>
-                    <v-btn @click="showDialog = false">Close</v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-dialog>
-            </div>
-          </v-container>
+                <v-dialog v-model="showDialog" style="max-width: 800px">
+                  <v-card>
+                    <v-card-title>User story: <b>{{ storyName }}</b></v-card-title>
+                    <v-card-subtitle>Add a new subtask</v-card-subtitle>
+                    <v-form ref="createForm">
+                      <v-alert v-if="successfullyCreatedSubtask" type="success">
+                        Subtask created successfully!
+                      </v-alert>
+                      <v-text-field style="margin: 20px" v-model="subtask.description" label="Description"
+                        :rules="checkRules('Description')"></v-text-field>
+                      <v-text-field :rules="checkRules('Duration', true)" style="margin: 20px" v-model="subtask.time"
+                        label="Duration in hours"></v-text-field>
+                      <v-select style="margin: 20px" v-model="subtask.developer" :items="developer_names"
+                        label="Suggested developer"></v-select>
+                    </v-form>
+                    <v-card-actions>
+                      <v-btn style="margin: 10px" class="bg-deep-purple" @click="createSubtask">Create</v-btn>
+                      <v-spacer></v-spacer>
+                      <v-btn @click="showDialog = false">Close</v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-dialog>
+              </div>
+            </v-container>
+          </div>
         </div>
       </div>
     </div>
@@ -161,6 +137,7 @@
 import { onMounted, ref, watch } from 'vue';
 import { formatDate } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
+import { de } from 'vuetify/locale';
 
 const user_profile_id = ref('');
 
@@ -259,6 +236,10 @@ async function getDevelopers(projectId: string) {
 }
 
 async function openDialog(index: number) {
+  subtask.value.description = '';
+  subtask.value.time = '';
+  subtask.value.developer = '';
+  subtask.value.is_done = false;
   successfullyCreatedSubtask.value = false;
   activeIndex.value = index;
   showDialog.value = true;
@@ -282,10 +263,10 @@ async function getProjects() {
     console.error('Error fetching projects');
   } else {
     projects.value = data.map((project: any) => project.project);
-    isLoading.value = false;
     selectedProject.value = projects.value[0];
   }
   await getCurrentSprint();
+  isLoading.value = false;
 }
 
 async function getCurrentSprint() {
@@ -348,7 +329,6 @@ async function getSubtasks(userStory: any) {
     userStory.subtasks = data;
     const timeSum = ref(0);
     for (const subtask of userStory.subtasks) {
-      console.log('Subtask:', subtask);
 
       if (subtask.assigned_developer_id) {
         const { data: assignedDeveloper } = await supabase
@@ -384,42 +364,56 @@ async function createSubtask() {
   }
 
   const formItems = [subtask.value.description, subtask.value.time, subtask.value.developer];
-  if (!formItems.every((item: any) => !!item)) {
+  // Check for empty subtask.value.description and subtask.value.time
+  if (formItems[0] === '' || formItems[1] === '') {
     return;
   }
-  const { data: developer, error } = await supabase
-    .from('user_profile')
-    .select('id')
-    .eq('name', subtask.value.developer.split(' ')[0])
-    .eq('surname', subtask.value.developer.split(' ')[1])
-    .single();
 
-  if (error) {
-    console.error('Error fetching developer');
-  } else {
-    const { error } = await supabase.from('subtasks').insert([
-      {
-        user_story_id: userStories.value[activeIndex.value].id,
-        description: subtask.value.description,
-        estimated_time: subtask.value.time,
-        developer_id: developer.id,
-        is_done: false,
-      },
-    ]);
+  let subtaskPayload = {
+    user_story_id: userStories.value[activeIndex.value].id,
+    description: subtask.value.description,
+    estimated_time: subtask.value.time,
+    developer_id: null,
+    is_done: false,
+  }
+
+  if (subtask.value.developer !== '') {
+    const { data: developer, error } = await supabase
+      .from('user_profile')
+      .select('id')
+      .eq('name', subtask.value.developer.split(' ')[0])
+      .eq('surname', subtask.value.developer.split(' ')[1])
+      .single();
+
     if (error) {
-      console.error('Error creating subtask');
-    } else {
-      successfullyCreatedSubtask.value = true;
-
-      setTimeout(() => {
-        showDialog.value = false;
-        subtask.value.description = '';
-        subtask.value.time = '';
-        subtask.value.developer = '';
-      }, 1000);
-
-      await getUserStories();
+      console.error('Error fetching developer');
+      return;
     }
+    subtaskPayload['developer_id'] = developer.id;
+
+  }
+  const { error: insertError } = await supabase.from('subtasks').insert([
+    {
+      user_story_id: subtaskPayload.user_story_id,
+      description: subtaskPayload.description,
+      estimated_time: subtaskPayload.estimated_time,
+      developer_id: subtaskPayload.developer_id,
+      is_done: subtaskPayload.is_done,
+    },
+  ]);
+  if (insertError) {
+    console.error('Error creating subtask');
+  } else {
+    successfullyCreatedSubtask.value = true;
+
+    setTimeout(() => {
+      showDialog.value = false;
+      subtask.value.description = '';
+      subtask.value.time = '';
+      subtask.value.developer = '';
+    }, 1000);
+
+    await getUserStories();
   }
 }
 
