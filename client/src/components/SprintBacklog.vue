@@ -175,7 +175,6 @@ onMounted(async () => {
 });
 
 const isLoading = ref(true);
-const organizationId = localStorage.getItem('organizationId');
 const projects = ref<any[]>([]);
 const selectedProject = ref({
   id: '',
@@ -267,7 +266,6 @@ async function getProjects() {
   const { data, error } = await supabase
     .from('project')
     .select('id, name, description')
-    .eq('organization_id', organizationId);
   if (error) {
     console.error('Error fetching projects');
   } else {

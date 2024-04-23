@@ -32,6 +32,15 @@
               required></v-text-field>
           </v-row>
 
+          <v-row dense>
+            <v-text-field
+              v-model="dlgData.repeatPassword"
+              label="Repeat password"
+              type="password"
+              :rules="[rules.passwordsMatch(dlgData.password)]"
+              required></v-text-field>
+          </v-row>
+
           <v-row>
             <v-radio-group v-model="dlgData.rights" inline label="Sistem rights:" :disabled="false">
               <v-radio label="Administrator" value="admin"></v-radio>
@@ -52,6 +61,7 @@
 </template>
 
 <script lang="ts">
+import { useQueryClient } from '@tanstack/vue-query';
 import { defineComponent, ref } from 'vue';
 import { supabase } from '../lib/supabaseClient';
 import { rules } from './DlgProfile.vue';
@@ -61,6 +71,7 @@ export default defineComponent({
     const show = ref(false);
     const dlgData = ref({
       password: '',
+      repeatPassword: '',
       name: '',
       surname: '',
       email: '',
@@ -68,7 +79,7 @@ export default defineComponent({
     });
 
     const form = ref(null);
-
+    const queryClient = useQueryClient();
 
     const saveNewUser = async () => {
       const value = await form.value.validate();
@@ -95,6 +106,9 @@ export default defineComponent({
         if (!error) {
           // No error, close the dialog
           show.value = false;
+          await queryClient.invalidateQueries({
+            queryKey: ['users'],
+          });
         }
 
         return data;

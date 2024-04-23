@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import DlgSelectOrganization from '../dialogs/DlgSelectOrganization.vue';
 import { supabase } from '../lib/supabaseClient';
 
 const loading = ref(false);
@@ -28,9 +27,9 @@ const handleLogin = async () => {
     loading.value = false;
 
     // show the dialog
-    showDlgSelectOrganization.value = true;
+    //showDlgSelectOrganization.value = true;
 
-    //router.push('/');
+    router.push('/');
   }
 };
 
@@ -64,8 +63,7 @@ const showDialog = () => {
       >
     </div>
   </form>
-  <DlgSelectOrganization
+  <!-- <DlgSelectOrganization
     v-model="showDlgSelectOrganization"
-    @update:show="showDlgSelectOrganization = $event" />
-  <button @click="showDialog">Show Dialog</button>
+    @update:show="showDlgSelectOrganization = $event" /> -->
 </template>
