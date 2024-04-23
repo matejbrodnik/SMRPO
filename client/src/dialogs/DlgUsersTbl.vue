@@ -57,29 +57,6 @@ export default defineComponent({
       console.log('item', item.item);
       user.value = item.item;
       dlgEditUser.value.show = true;
-
-      /* dlgEditUser.value.dlgData = item.item;
-      dlgEditUser.value.show = true;
-
-      // Fetch all organizations
-      const { data: orgData, error: orgError } = await supabase.from('organization').select('*');
-      if (orgError) {
-        console.error('Error fetching organizations:', orgError.message);
-      } else {
-        dlgEditUser.value.dlgData.organizations = orgData;
-      }
-
-      // Fetch organizations the user belongs to
-      const { data: userOrgData, error: userOrgError } = await supabase
-        .from('orgs_users')
-        .select('*')
-        .eq('user_id', item.item.user_id);
-      if (userOrgError) {
-        console.error('Error fetching user organizations:', userOrgError.message);
-      } else {
-        dlgEditUser.value.dlgData.selectedOrganizations = userOrgData;
-      }
- */
     }
 
     const usersQuery = useQuery({

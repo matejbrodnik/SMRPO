@@ -90,8 +90,8 @@ Deno.serve(async (req: Request) => {
 
   const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-  const { email, password, name, surname, organization_ids,  } = await req.json();
-  console.log(email, password, name, surname, organization_ids);
+  const { email, password, name, surname  } = await req.json();
+  console.log(email, password, name, surname);
 
   const authHeader = req.headers.get('Authorization');
   const token = authHeader?.split(' ')[1]; // The token is after the 'Bearer' part
@@ -110,7 +110,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await supabaseClient.auth.admin.createUser({
       email,
       password,
-      user_metadata: { name, surname, email, role, organization_ids },
+      user_metadata: { name, surname, email, role },
       email_confirm: true, // Confirm the user's email address
     });
 

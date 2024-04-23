@@ -1,53 +1,85 @@
 <template>
-  <div style="height: 100vh;">
-    <div style="margin: 30px auto; max-width: 80%;">
-      <v-btn class="bg-deep-purple" theme="dark" style="margin: 30px 0;" v-if="isAdmin" @click="openModal">
+  <div style="height: 100vh">
+    <div style="margin: 30px auto; max-width: 80%">
+      <v-btn
+        class="bg-deep-purple"
+        theme="dark"
+        style="margin: 30px 0"
+        v-if="isAdmin"
+        @click="openModal">
         New project
       </v-btn>
 
-      <v-dialog v-model="isModalOpen" style="max-width: 800px;">
+      <v-dialog v-model="isModalOpen" style="max-width: 800px">
         <v-card>
           <v-card-title class="headline">Create a new project</v-card-title>
           <v-card-text>
             <v-form ref="createForm">
               <v-alert v-if="createProjectAlert" type="error">
-                Invalid input data. Project name already exists or project owner is scrum master/part of developers.
+                Invalid input data. Project name already exists or project owner is scrum
+                master/part of developers.
               </v-alert>
               <v-alert v-if="showProjectSuccessMessage" type="success">
                 Project created successfully!
               </v-alert>
               <v-row dense>
                 <v-col cols="12">
-                  <v-text-field v-model="name" label="Name" :rules="checkEmpty('Name')"></v-text-field>
+                  <v-text-field
+                    v-model="name"
+                    label="Name"
+                    :rules="checkEmpty('Name')"></v-text-field>
                 </v-col>
               </v-row>
-              <v-textarea v-model="description" label="Describe this project"
+              <v-textarea
+                v-model="description"
+                label="Describe this project"
                 :rules="checkEmpty('Description')"></v-textarea>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="productOwner" :items="user_names" :item-props="user_ids" label="Product Owner"
+                  <v-select
+                    v-model="productOwner"
+                    :items="user_names"
+                    :item-props="user_ids"
+                    label="Product Owner"
                     :rules="checkEmpty('Product Owner')">
                   </v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="scrumMaster" :items="user_names" item-text="name" item-value="id"
-                    label="Scrum Master" :rules="checkEmpty('Scrum Master')"></v-select>
+                  <v-select
+                    v-model="scrumMaster"
+                    :items="user_names"
+                    item-text="name"
+                    item-value="id"
+                    label="Scrum Master"
+                    :rules="checkEmpty('Scrum Master')"></v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="developers" :items="user_names" item-text="name" item-value="id" label="Developers"
-                    multiple :rules="checkEmpty('Developers', true)"></v-select>
+                  <v-select
+                    v-model="developers"
+                    :items="user_names"
+                    item-text="name"
+                    item-value="id"
+                    label="Developers"
+                    multiple
+                    :rules="checkEmpty('Developers', true)"></v-select>
                 </v-col>
               </v-row>
             </v-form>
           </v-card-text>
           <v-card-actions>
-            <v-btn class="bg-deep-purple" @click="createProject" style="margin: 0 0 20px 20px">Create</v-btn>
+            <v-btn class="bg-deep-purple" @click="createProject" style="margin: 0 0 20px 20px"
+              >Create</v-btn
+            >
             <v-spacer></v-spacer>
-            <v-btn @click="isModalOpen = false, createProjectAlert = false" style="margin: 0 20px 20px 0">Close</v-btn>
+            <v-btn
+              @click="(isModalOpen = false), (createProjectAlert = false)"
+              style="margin: 0 20px 20px 0"
+              >Close</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -58,46 +90,75 @@
           <v-card-text>
             <v-form ref="updateForm">
               <v-alert v-if="editProjectAlert" type="error">
-                Invalid input data. Project name already exists or project owner is scrum master/part of developers.
+                Invalid input data. Project name already exists or project owner is scrum
+                master/part of developers.
               </v-alert>
               <v-alert v-if="showProjectSuccessMessage" type="success">
                 Project edited successfully!
               </v-alert>
               <v-row dense>
                 <v-col cols="12">
-                  <v-text-field v-model="selectedProject.name" :rules="checkEmpty('Name')" label="Name"></v-text-field>
+                  <v-text-field
+                    v-model="selectedProject.name"
+                    :rules="checkEmpty('Name')"
+                    label="Name"></v-text-field>
                 </v-col>
               </v-row>
-              <v-textarea v-model="selectedProject.description" :rules="checkEmpty('Description')"
+              <v-textarea
+                v-model="selectedProject.description"
+                :rules="checkEmpty('Description')"
                 label="Describe this project"></v-textarea>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.productOwner.name" :items="user_names" label="Product Owner"
+                  <v-select
+                    v-model="selectedProject.productOwner.name"
+                    :items="user_names"
+                    label="Product Owner"
                     :rules="checkEmpty('Product Owner')">
                   </v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.scrumMaster.name" :items="user_names" item-text="name" item-value="id"
-                    label="Scrum Master" :rules="checkEmpty('Scrum Master')"></v-select>
+                  <v-select
+                    v-model="selectedProject.scrumMaster.name"
+                    :items="user_names"
+                    item-text="name"
+                    item-value="id"
+                    label="Scrum Master"
+                    :rules="checkEmpty('Scrum Master')"></v-select>
                 </v-col>
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-select v-model="selectedProject.developers.devs" :items="user_names" item-text="name" item-value="id"
-                    label="Developers" multiple :rules="checkEmpty('Developers', true)"></v-select>
+                  <v-select
+                    v-model="selectedProject.developers.devs"
+                    :items="user_names"
+                    item-text="name"
+                    item-value="id"
+                    label="Developers"
+                    multiple
+                    :rules="checkEmpty('Developers', true)"></v-select>
                 </v-col>
               </v-row>
             </v-form>
           </v-card-text>
           <v-card-actions>
-            <v-btn class="bg-deep-purple" @click="updateProject" style="margin: 0 0 20px 20px">Update</v-btn>
-            <v-btn class="bg-deep-purple" @click="showSprintCreate = true" style="margin: 0 0 20px 20px">Create new
-              sprint</v-btn>
+            <v-btn class="bg-deep-purple" @click="updateProject" style="margin: 0 0 20px 20px"
+              >Update</v-btn
+            >
+            <v-btn
+              class="bg-deep-purple"
+              @click="showSprintCreate = true"
+              style="margin: 0 0 20px 20px"
+              >Create new sprint</v-btn
+            >
             <v-spacer></v-spacer>
-            <v-btn @click="isEditModalOpen = false, editProjectAlert = false"
-              style="margin: 0 20px 20px 0">Close</v-btn>
+            <v-btn
+              @click="(isEditModalOpen = false), (editProjectAlert = false)"
+              style="margin: 0 20px 20px 0"
+              >Close</v-btn
+            >
             <v-dialog v-model="showSprintCreate" class="dlgWindow" width="50%">
               <v-card title="New sprint">
                 <v-card-text>
@@ -105,9 +166,14 @@
                   <v-row dense>
                     <!-- row to show errors when entering things -->
                     <v-col cols="12">
-                      <v-alert id="sprintError" v-if="showSprintError" type="error" elevation="2" colored>
-                        Start and end date must be weekdays, and not in the past.
-                        Start date must be before end date.
+                      <v-alert
+                        id="sprintError"
+                        v-if="showSprintError"
+                        type="error"
+                        elevation="2"
+                        colored>
+                        Start and end date must be weekdays, and not in the past. Start date must be
+                        before end date.
                       </v-alert>
                       <v-alert v-if="sprintOverlap">
                         Overlap with existing sprint, please change dates or name.
@@ -115,8 +181,6 @@
                       <v-alert v-if="showSuccessMessage" type="success">
                         Sprint created successfully!
                       </v-alert>
-
-
                     </v-col>
                     <v-col cols="7">
                       <v-text-field v-model="sprintData.name" label="Name" required></v-text-field>
@@ -124,29 +188,53 @@
                     <v-divider></v-divider>
 
                     <v-col cols="4">
-                      <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
-                        transition="scale-transition" offset-y min-width="290px">
+                      <v-menu
+                        v-model="showDatePickerStart"
+                        :close-on-content-click="false"
+                        :nudge-right="40"
+                        transition="scale-transition"
+                        offset-y
+                        min-width="290px">
                         <template v-slot:activator="{ on, attrs }">
-                          <v-text-field v-model="sprintData.start_date" @click="showDatePickerStart = true"
-                            label="Start date" prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
+                          <v-text-field
+                            v-model="sprintData.start_date"
+                            @click="showDatePickerStart = true"
+                            label="Start date"
+                            prepend-icon="mdi-calendar"
+                            v-bind="attrs"
+                            v-on="on"></v-text-field>
 
-                          <v-date-picker v-model="sprintData.start_date" @input="showDatePickerStart = false"
-                            v-if="showDatePickerStart" no-title>
+                          <v-date-picker
+                            v-model="sprintData.start_date"
+                            @input="showDatePickerStart = false"
+                            v-if="showDatePickerStart"
+                            no-title>
                             <v-spacer></v-spacer>
-
                           </v-date-picker>
                         </template>
                       </v-menu>
                     </v-col>
                     <!-- <v-divider></v-divider> -->
                     <v-col cols="4">
-                      <v-menu v-model="showDatePickerEnd" :close-on-content-click="false" :nudge-right="40"
-                        transition="scale-transition" offset-y min-width="290px">
+                      <v-menu
+                        v-model="showDatePickerEnd"
+                        :close-on-content-click="false"
+                        :nudge-right="40"
+                        transition="scale-transition"
+                        offset-y
+                        min-width="290px">
                         <template v-slot:activator="{ on, attrs }">
-                          <v-text-field v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
-                            prepend-icon="mdi-calendar" v-bind="attrs" v-on="on"></v-text-field>
+                          <v-text-field
+                            v-model="sprintData.end_date"
+                            @click="showDatePickerEnd = true"
+                            label="End date"
+                            prepend-icon="mdi-calendar"
+                            v-bind="attrs"
+                            v-on="on"></v-text-field>
 
-                          <v-date-picker v-model="sprintData.end_date" v-if="showDatePickerEnd"
+                          <v-date-picker
+                            v-model="sprintData.end_date"
+                            v-if="showDatePickerEnd"
                             no-title></v-date-picker>
                         </template>
                       </v-menu>
@@ -167,7 +255,12 @@
       </v-dialog>
 
       <div v-if="isLoading">Loading...</div>
-      <v-data-table style="margin: auto;" v-else :headers="headers" :items="items" show-expand
+      <v-data-table
+        style="margin: auto"
+        v-else
+        :headers="headers"
+        :items="items"
+        show-expand
         @expanded="getProjectRoles">
         <template v-slot:item.action="{ item }">
           <v-btn v-if="canEdit" class="bg-deep-purple" size="30" @click="openEditModal(item)">
@@ -191,9 +284,7 @@
             </td>
           </tr>
           <tr>
-            <td :colspan="columns.length">
-              Description: {{ item.description }}
-            </td>
+            <td :colspan="columns.length">Description: {{ item.description }}</td>
           </tr>
         </template>
       </v-data-table>
@@ -202,14 +293,14 @@
 </template>
 
 <script setup lang="ts">
-import { supabase } from "../lib/supabaseClient";
 import { onMounted, ref } from 'vue';
 import { formatDateTime } from '../lib/dateFormatter';
+import { supabase } from '../lib/supabaseClient';
 
 onMounted(() => {
   getProjects();
   getUsers();
-})
+});
 
 const name = ref('');
 const description = ref('');
@@ -233,7 +324,6 @@ const user_ids = ref<string[]>([]);
 
 const createForm = ref(null);
 const updateForm = ref(null);
-
 
 const checkEmpty = (field, isMultiple = false) => {
   return isMultiple
@@ -261,7 +351,6 @@ const selectedProject = ref({
   developers: [],
 });
 const isEditModalOpen = ref(false);
-
 
 async function getUserRoles(projectId: number, project: any) {
   let isSuccessful = false;
@@ -291,12 +380,12 @@ async function getUserRoles(projectId: number, project: any) {
           case 'product_owner':
             project.productOwner = { name: fullName, user_id: role.user_id };
             break;
-            case 'scrum_master':
-              project.scrumMaster = { name: fullName, user_id: role.user_id };
-              break;
-              case 'developer':
-                project.developers = project.developers || [];
-                project.developers.push({ name: fullName, user_id: role.user_id });
+          case 'scrum_master':
+            project.scrumMaster = { name: fullName, user_id: role.user_id };
+            break;
+          case 'developer':
+            project.developers = project.developers || [];
+            project.developers.push({ name: fullName, user_id: role.user_id });
             break;
           default:
             // Handle any other roles or ignore
@@ -341,7 +430,6 @@ const openModal = () => {
   developers.value = [];
 };
 
-
 const minDate = new Date().toISOString().split('T')[0];
 const showSprintError = ref(false);
 const sprintOverlap = ref(false);
@@ -352,9 +440,7 @@ const validateWeekend = (date) => {
   return dayOfWeek !== 0 && dayOfWeek !== 6; // 0 = Sunday, 6 = Saturday
 };
 
-
-
-// sprint values 
+// sprint values
 const sprintData = ref({
   name: '',
   start_date: ref([]),
@@ -377,16 +463,21 @@ supabase.auth.onAuthStateChange(async (_, session) => {
 
 const validateSprintDates = () => {
   showSprintError.value = true;
-  if (!validateWeekend(sprintData.value.start_date) || !validateWeekend(sprintData.value.end_date)) {
+  if (
+    !validateWeekend(sprintData.value.start_date) ||
+    !validateWeekend(sprintData.value.end_date)
+  ) {
     showSprintError.value = true;
     return false;
   }
   if (sprintData.value.start_date > sprintData.value.end_date) {
-
     showSprintError.value = true;
     return false;
   }
-  if (new Date(sprintData.value.start_date) < new Date(minDate) || new Date(sprintData.value.end_date) < new Date(minDate)) {
+  if (
+    new Date(sprintData.value.start_date) < new Date(minDate) ||
+    new Date(sprintData.value.end_date) < new Date(minDate)
+  ) {
     showSprintError.value = true;
     return false;
   }
@@ -400,7 +491,7 @@ async function validateSprint(sprintData) {
     .select('*')
     .eq('project_id', currentProjectId.value);
 
-  const sprintOverlap = projSprints.some(sprint => {
+  const sprintOverlap = projSprints.some((sprint) => {
     const newStartDate = new Date(sprintData.value.start_date);
     const newEndDate = new Date(sprintData.value.end_date);
     const existingStartDate = new Date(sprint.start_date);
@@ -416,20 +507,24 @@ async function validateSprint(sprintData) {
   });
 
   return sprintOverlap;
-};
+}
 
 const resetFormAndCloseDialog = () => {
   sprintData.value = {
     name: '',
     startDate: ref([]),
-    endDate: ref([])
+    endDate: ref([]),
   }; // Reset form data
   showSprintCreate.value = false; // Close dialog
 };
 
 async function saveSprint() {
-  // make sure sprintdata isn't empty 
-  if (sprintData.value.name === '' || sprintData.value.start_date.length === 0 || sprintData.value.end_date.length === 0) {
+  // make sure sprintdata isn't empty
+  if (
+    sprintData.value.name === '' ||
+    sprintData.value.start_date.length === 0 ||
+    sprintData.value.end_date.length === 0
+  ) {
     // showSprintError.value = true;
     return;
   }
@@ -442,20 +537,20 @@ async function saveSprint() {
   }
   sprintOverlap.value = false;
 
-  var duration = countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8 / 6;
+  var duration = (countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8) / 6;
   // round to int
-  duration = Math.round(duration)
+  duration = Math.round(duration);
 
   // insert the new sprint into the database
-  const { data, error } = await supabase
-    .from('sprints')
-    .insert([{
+  const { data, error } = await supabase.from('sprints').insert([
+    {
       name: sprintData.value.name,
       start_date: sprintData.value.start_date,
       end_date: sprintData.value.end_date,
       project_id: currentProjectId.value,
       duration: duration,
-    }]);
+    },
+  ]);
   showSuccessMessage.value = true;
   setTimeout(() => {
     resetFormAndCloseDialog();
@@ -488,7 +583,7 @@ const countWeekdays = (startDate, endDate) => {
   }
 
   return count;
-}
+};
 
 async function checkScrumMaster(userId: any) {
   const { data, error } = await supabase
@@ -508,12 +603,8 @@ async function getProjects() {
   const userId = await (await supabase.auth.getUser()).data.user?.id;
   const isScrumMaster = await checkScrumMaster(userId);
   canEdit.value = isAdmin.value || isScrumMaster;
-  
-  const organizationId = localStorage.getItem('organizationId');
-  const { data, error } = await supabase
-    .from('project')
-    .select('*')
-    .eq('organization_id', organizationId);
+
+  const { data, error } = await supabase.from('project').select('*');
 
   if (error) {
     console.error('Error fetching projects');
@@ -523,17 +614,22 @@ async function getProjects() {
       item.created_at = formatDateTime(item.created_at);
     });
 
-
     for (const item of items.value) {
       const { project, isSuccessful } = await getUserRoles(item.id, item);
 
       if (isSuccessful) {
         if (project.productOwner && project.scrumMaster && project.developers) {
-          item.productOwner = { name: project.productOwner.name, user_id: project.productOwner.user_id };
-          item.scrumMaster = { name: project.scrumMaster.name, user_id: project.scrumMaster.user_id };
+          item.productOwner = {
+            name: project.productOwner.name,
+            user_id: project.productOwner.user_id,
+          };
+          item.scrumMaster = {
+            name: project.scrumMaster.name,
+            user_id: project.scrumMaster.user_id,
+          };
           item.developers = {
             devs: project.developers.map((dev: any) => dev.name),
-            user_id: project.developers.map((dev: any) => dev.user_id)
+            user_id: project.developers.map((dev: any) => dev.user_id),
           };
         }
       }
@@ -543,16 +639,14 @@ async function getProjects() {
 }
 
 async function getUsers() {
-  const { data, error } = await supabase
-    .from('user_profile')
-    .select('user_id, id, name, surname');
+  const { data, error } = await supabase.from('user_profile').select('user_id, id, name, surname');
 
   if (error) {
-    console.error("Error fetching users")
+    console.error('Error fetching users');
   } else {
     users.value = data;
     for (const user of data) {
-      user_names.value.push(user.name + " " + user.surname);
+      user_names.value.push(user.name + ' ' + user.surname);
       user_ids.value.push(user.user_id);
     }
   }
@@ -581,32 +675,44 @@ async function createProject(this: any) {
 
   const { data, error } = await supabase
     .from('project')
-    .insert([{
-      name: name.value,
-      description: description.value,
-      organization_id: localStorage.getItem('organizationId'),
-    }]).select();
+    .insert([
+      {
+        name: name.value,
+        description: description.value,
+      },
+    ])
+    .select();
 
   if (error) {
-    console.error("Error creating project")
+    console.error('Error creating project');
   } else {
     isModalOpen.value = false;
     const projectId = data[0].id;
 
-    const po = users.value.find((user: any) => user.name + ' ' + user.surname === productOwner.value);
-    const sm = users.value.find((user: any) => user.name + ' ' + user.surname === scrumMaster.value);
-    const devs = users.value.filter((user: any) => developers.value.includes(user.name + ' ' + user.surname));
+    const po = users.value.find(
+      (user: any) => user.name + ' ' + user.surname === productOwner.value
+    );
+    const sm = users.value.find(
+      (user: any) => user.name + ' ' + user.surname === scrumMaster.value
+    );
+    const devs = users.value.filter((user: any) =>
+      developers.value.includes(user.name + ' ' + user.surname)
+    );
 
     await supabase
       .from('project_role')
       .insert([
         { project_id: projectId, user_id: po.user_id, role: 'product_owner' },
         { project_id: projectId, user_id: sm.user_id, role: 'scrum_master' },
-        ...devs.map((item: any) => ({ project_id: projectId, user_id: item.user_id, role: 'developer' }))
+        ...devs.map((item: any) => ({
+          project_id: projectId,
+          user_id: item.user_id,
+          role: 'developer',
+        })),
       ]);
 
     if (error) {
-      console.error("Error creating project role")
+      console.error('Error creating project role');
     } else {
       showProjectSuccessMessage.value = false;
       items.value.push({
@@ -625,7 +731,12 @@ async function updateProject() {
   if (updateForm.value) {
     updateForm.value.validate();
   }
-  const formItems = [selectedProject.value.name, selectedProject.value.productOwner.name, selectedProject.value.scrumMaster.name, selectedProject.value.developers.devs];
+  const formItems = [
+    selectedProject.value.name,
+    selectedProject.value.productOwner.name,
+    selectedProject.value.scrumMaster.name,
+    selectedProject.value.developers.devs,
+  ];
   if (!formItems.every((item: any) => !!item)) {
     return;
   }
@@ -644,44 +755,50 @@ async function updateProject() {
     .eq('id', selectedProject.value.id);
 
   if (error) {
-    console.error("Error updating project")
+    console.error('Error updating project');
   } else {
-    let productOwner = selectedProject.value.productOwner
-    let scrumMaster = selectedProject.value.scrumMaster
-    let developers = selectedProject.value.developers
+    let productOwner = selectedProject.value.productOwner;
+    let scrumMaster = selectedProject.value.scrumMaster;
+    let developers = selectedProject.value.developers;
 
-    const po = users.value.find((user: any) => user.name + ' ' + user.surname === productOwner.name);
+    const po = users.value.find(
+      (user: any) => user.name + ' ' + user.surname === productOwner.name
+    );
     const sm = users.value.find((user: any) => user.name + ' ' + user.surname === scrumMaster.name);
-    const devs = users.value.filter((user: any) => developers.devs.includes(user.name + ' ' + user.surname));
+    const devs = users.value.filter((user: any) =>
+      developers.devs.includes(user.name + ' ' + user.surname)
+    );
 
-    await supabase
-      .from('project_role')
-      .delete()
-      .eq('project_id', selectedProject.value.id);
+    await supabase.from('project_role').delete().eq('project_id', selectedProject.value.id);
 
     await supabase
       .from('project_role')
       .insert([
         { project_id: selectedProject.value.id, user_id: po.user_id, role: 'product_owner' },
         { project_id: selectedProject.value.id, user_id: sm.user_id, role: 'scrum_master' },
-        ...devs.map((item: any ) => ({ project_id: selectedProject.value.id, user_id: item.user_id, role: 'developer' }))
+        ...devs.map((item: any) => ({
+          project_id: selectedProject.value.id,
+          user_id: item.user_id,
+          role: 'developer',
+        })),
       ]);
     setTimeout(() => {
       showProjectSuccessMessage.value = false;
       editProjectAlert.value = false;
       isEditModalOpen.value = false;
     }, 1000);
-
   }
 }
-
 
 const validateForm = (formItems: any[]) => {
   // make sure project name is not the same as existing projects.
   // make sure project owner != scrum master and project owner is not part of devs
   let duplicateName = false;
   items.value.forEach((item: any) => {
-    if (item.name.toLowerCase() === formItems[0].toLowerCase() && item.id !== selectedProject.value.id) {
+    if (
+      item.name.toLowerCase() === formItems[0].toLowerCase() &&
+      item.id !== selectedProject.value.id
+    ) {
       duplicateName = true;
     }
   });
@@ -700,5 +817,5 @@ const validateForm = (formItems: any[]) => {
     }
   }
   return true;
-}
+};
 </script>

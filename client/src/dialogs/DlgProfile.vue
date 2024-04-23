@@ -6,36 +6,45 @@
           <v-text-field v-model="dlgData.user" label="Uporabniško ime" required></v-text-field>
         </v-row> -->
 
-        <v-row dense v-if="successMessage">
-          <v-alert type="success">{{ successMessage }}</v-alert>
-        </v-row>
-        <v-row dense v-if="errorMessage">
-          <v-alert type="error">{{ errorMessage }}</v-alert>
-        </v-row>
+        <v-form ref="form">
+          <v-row dense v-if="successMessage">
+            <v-alert type="success">{{ successMessage }}</v-alert>
+          </v-row>
+          <v-row dense v-if="errorMessage">
+            <v-alert type="error">{{ errorMessage }}</v-alert>
+          </v-row>
 
-        <v-row dense>
-          <v-text-field v-model="dlgData.name" label="Ime" required></v-text-field>
-        </v-row>
-        <v-row dense>
-          <v-text-field v-model="dlgData.surname" label="Priimek" required></v-text-field>
-        </v-row>
-        <v-row dense>
-          <v-text-field
-            v-model="dlgData.email"
-            label="E-mail"
-            :rules="[rules.required, rules.email]"
-            readonly
-            required>
-          </v-text-field>
-        </v-row>
-        <v-row dense>
-          <v-text-field
-            v-model="dlgData.password"
-            label="Change password"
-            type="password"
-            :rules="[rules.password]"
-            required></v-text-field>
-        </v-row>
+          <v-row dense>
+            <v-text-field v-model="dlgData.name" label="Ime" required></v-text-field>
+          </v-row>
+          <v-row dense>
+            <v-text-field v-model="dlgData.surname" label="Priimek" required></v-text-field>
+          </v-row>
+          <v-row dense>
+            <v-text-field
+              v-model="dlgData.email"
+              label="E-mail"
+              :rules="[rules.required, rules.email]"
+              required>
+            </v-text-field>
+          </v-row>
+          <v-row dense>
+            <v-text-field
+              v-model="dlgData.password"
+              label="Change password"
+              type="password"
+              :rules="[rules.password]"
+              required></v-text-field>
+          </v-row>
+          <v-row dense>
+            <v-text-field
+              v-model="dlgData.repeatPassword"
+              label="Repeat password"
+              type="password"
+              :rules="[rules.passwordsMatch(dlgData.password)]"
+              required></v-text-field>
+          </v-row>
+        </v-form>
       </v-card-text>
 
       <v-divider></v-divider>
@@ -61,55 +70,71 @@ export default defineComponent({
       name: '',
       surname: '',
       password: '',
+      repeatPassword: '',
     });
+
+    const form = ref(null);
+
+    const originalEmail = ref('');
 
     const successMessage = ref('');
     const errorMessage = ref('');
 
     const updateProfile = async () => {
-      const user = await (await supabase.auth.getUser()).data.user;
+      const validation = await form.value.validate();
+      if (validation.valid) {
+        if (dlgData.value.password && dlgData.value.password.length >= 8) {
+          // Update the user's password
+          const { error: passwordError } = await supabase.auth.updateUser({
+            password: dlgData.value.password,
+          });
 
-      if (dlgData.value.password && dlgData.value.password.length >= 8) {
-        // Update the user's password
-        const { error: passwordError } = await supabase.auth.updateUser({
-          password: dlgData.value.password,
-        });
+          if (passwordError) {
+            errorMessage.value = 'Error updating password: ' + passwordError.message;
+            setTimeout(() => {
+              successMessage.value = '';
+            }, 2000);
 
-        if (passwordError) {
-          errorMessage.value = 'Error updating password: ' + passwordError.message;
+            //dont update profile if password update failed
+            return;
+          }
+        }
+
+        if (dlgData.value.email !== originalEmail.value) {
+          const { error: emailError } = await supabase.auth.updateUser({
+            email: dlgData.value.email,
+          });
+          if (emailError) {
+            console.log('Error updating email: ', emailError);
+          }
+        }
+
+        const { data, error } = await supabase
+          .from('user_profile')
+          .update({
+            name: dlgData.value.name,
+            surname: dlgData.value.surname,
+          })
+          .eq('id', dlgData.value.id);
+
+        if (error) {
+          errorMessage.value = 'Error updating profile: ' + error.message;
           setTimeout(() => {
             successMessage.value = '';
           }, 2000);
-
-          //dont update profile if password update failed
-          return;
+        } else {
+          successMessage.value = 'Profile updated successfully!';
+          setTimeout(() => {
+            successMessage.value = '';
+          }, 2000);
         }
-      }
-      const { data, error } = await supabase
-        .from('user_profile')
-        .update({
-          name: dlgData.value.name,
-          surname: dlgData.value.surname,
-        })
-        .eq('id', dlgData.value.id);
-
-      if (error) {
-        errorMessage.value = 'Error updating profile: ' + error.message;
-        setTimeout(() => {
-          successMessage.value = '';
-        }, 2000);
-      } else {
-        successMessage.value = 'Profile updated successfully!';
-        setTimeout(() => {
-          successMessage.value = '';
-        }, 2000);
       }
     };
 
     async function fetchProfile() {
       const user = await (await supabase.auth.getUser()).data.user;
       const userId = user.id;
-      const email = user.email;
+      originalEmail.value = user.email;
 
       let { data, error } = await supabase.from('user_profile').select('*').eq('user_id', userId);
       console.log('Profile: ', data);
@@ -119,7 +144,7 @@ export default defineComponent({
         id: data[0].id,
         name: data[0].name,
         surname: data[0].surname,
-        email: email,
+        email: user.email,
       };
     }
 
@@ -140,6 +165,7 @@ export default defineComponent({
       rules,
       successMessage,
       errorMessage,
+      form,
     };
   },
 });
@@ -163,5 +189,6 @@ export const rules = {
     }
     return value.length >= 8 || 'Min 8 characters';
   },
+  passwordsMatch: (password) => (value) => value === password || 'Passwords do not match',
 };
 </script>

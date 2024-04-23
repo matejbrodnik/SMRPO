@@ -1,93 +1,134 @@
 <template>
   <v-dialog v-model="showSprintEditDlg" class="dlgWindow" width="50%">
-          <v-card title="Edit sprint">
-            <v-card-text>
-              <!-- Edit start date, end date and name -->
-              <v-row dense>
-                <!-- row to show errors when entering things -->
-                <v-col cols="12">
-                  <v-alert id="sprintError" v-if="showSprintError" type="error" elevation="2" colored>
-                    Start and end date must be weekdays, and not in the past.
-                    Start date must be before end date.
-                  </v-alert>
-                  <v-alert v-if="sprintOverlap">
-                    Overlap with existing sprint, please change dates or name.
-                  </v-alert>
-                  <v-alert v-if="showSuccessMessage" type="success">
-                    Sprint edited successfully!
-                  </v-alert>
+    <v-card title="Edit sprint">
+      <v-card-text>
+        <!-- Edit start date, end date and name -->
+        <v-row dense>
+          <!-- row to show errors when entering things -->
+          <v-col cols="12">
+            <v-alert id="sprintError" v-if="showSprintError" type="error" elevation="2" colored>
+              Start and end date must be weekdays, and not in the past. Start date must be before
+              end date.
+            </v-alert>
+            <v-alert v-if="sprintOverlap">
+              Overlap with existing sprint, please change dates or name.
+            </v-alert>
+            <v-alert v-if="showSuccessMessage" type="success">
+              Sprint edited successfully!
+            </v-alert>
+          </v-col>
+          <v-col cols="7">
+            <v-text-field
+              :disabled="canEditSprint == 1"
+              v-model="sprintData.name"
+              label="Name"
+              required></v-text-field>
+          </v-col>
 
+          <v-divider></v-divider>
+          <v-col cols="3">
+            <v-text-field
+              :disabled="canEditDuration == 1"
+              v-model="sprintData.duration"
+              label="Duration (pts.)"
+              required></v-text-field>
+          </v-col>
+          <v-divider></v-divider>
+          <v-col cols="4">
+            <v-menu
+              v-model="showDatePickerStart"
+              :close-on-content-click="false"
+              :nudge-right="40"
+              transition="scale-transition"
+              offset-y
+              min-width="290px">
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  :disabled="canEditSprint == 1"
+                  v-model="sprintData.start_date"
+                  @click="showDatePickerStart = true"
+                  label="Start date"
+                  prepend-icon="mdi-calendar"
+                  v-bind="attrs"
+                  v-on="on"></v-text-field>
 
-                </v-col>
-                <v-col cols="7">
-                  <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.name" label="Name" required></v-text-field>
-                </v-col>
-                
-                <v-divider></v-divider>
-                <v-col cols="3">
-                  <v-text-field :disabled="canEditDuration == 1" v-model="sprintData.duration" label="Duration (pts.)" required></v-text-field>
-                </v-col>
-                <v-divider></v-divider>
-                <v-col cols="4">
-                  <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
-                    transition="scale-transition" offset-y min-width="290px">
-                    <template v-slot:activator="{ on, attrs }">
-                    <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.start_date" @click="showDatePickerStart = true" label="Start date"
-                      prepend-icon="mdi-calendar" v-bind="attrs"
-                        v-on="on"></v-text-field>
+                <v-date-picker
+                  v-model="sprintData.start_date"
+                  @input="showDatePickerStart = false"
+                  v-if="showDatePickerStart"
+                  no-title>
+                  <v-spacer></v-spacer>
+                </v-date-picker>
+              </template>
+            </v-menu>
+          </v-col>
+          <!-- <v-divider></v-divider> -->
+          <v-col cols="4">
+            <v-menu
+              v-model="showDatePickerEnd"
+              :close-on-content-click="false"
+              :nudge-right="40"
+              transition="scale-transition"
+              offset-y
+              min-width="290px">
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  :disabled="canEditSprint == 1"
+                  v-model="sprintData.end_date"
+                  @click="showDatePickerEnd = true"
+                  label="End date"
+                  prepend-icon="mdi-calendar"
+                  v-bind="attrs"
+                  v-on="on"></v-text-field>
 
-                    <v-date-picker v-model="sprintData.start_date" @input="showDatePickerStart = false"
-                      v-if="showDatePickerStart" no-title>
-                      <v-spacer></v-spacer>
+                <v-date-picker
+                  v-model="sprintData.end_date"
+                  v-if="showDatePickerEnd"
+                  no-title></v-date-picker>
+              </template>
+            </v-menu>
+          </v-col>
+        </v-row>
+      </v-card-text>
 
-                    </v-date-picker>
-                  </template>
-                  </v-menu>
-                </v-col>
-                <!-- <v-divider></v-divider> -->
-                <v-col cols="4" >
-                  <v-menu v-model="showDatePickerEnd" :close-on-content-click="false" :nudge-right="40"
-                    transition="scale-transition" offset-y min-width="290px">
-                    <template v-slot:activator="{ on, attrs }">
-                  <v-text-field  :disabled="canEditSprint == 1" v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
-                    prepend-icon="mdi-calendar" v-bind="attrs"
-                        v-on="on"></v-text-field>
-
-                  <v-date-picker v-model="sprintData.end_date" v-if="showDatePickerEnd" no-title
-                     ></v-date-picker>
-                  </template>
-                  </v-menu>
-                </v-col>
-              </v-row>
-            </v-card-text>
-
-            <v-divider></v-divider>
-            <v-card-actions>
-              <v-spacer></v-spacer>
-              <v-btn text="Close" variant="text" @click="showSprintEditDlg = false; resetFormAndCloseDialog()"></v-btn>
-              <v-btn :disabled="canEditDuration == 1" text="Save" variant="text" @click="editSprint"></v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-      <div style="height: 100vh; overflow: hidden;">
-        <div style="margin: 30px auto; max-width: 80%;">
-          <div v-if="isLoading">Loading...</div>
-          <v-data-table v-else :headers="headers" :items="items" @click:row="showSprintEdit"></v-data-table>
-        </div>
-      </div>
+      <v-divider></v-divider>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn
+          text="Close"
+          variant="text"
+          @click="
+            showSprintEditDlg = false;
+            resetFormAndCloseDialog();
+          "></v-btn>
+        <v-btn
+          :disabled="canEditDuration == 1"
+          text="Save"
+          variant="text"
+          @click="editSprint"></v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+  <div style="height: 100vh; overflow: hidden">
+    <div style="margin: 30px auto; max-width: 80%">
+      <div v-if="isLoading">Loading...</div>
+      <v-data-table
+        v-else
+        :headers="headers"
+        :items="items"
+        @click:row="showSprintEdit"></v-data-table>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { supabase } from "../lib/supabaseClient";
 import { onMounted, ref, watchEffect } from 'vue';
 import { formatDateTime } from '../lib/dateFormatter';
-import { watch } from "vue";
+import { supabase } from '../lib/supabaseClient';
 
 onMounted(() => {
   fetchSprints();
-  
 });
-
 
 var canEditSprint = ref(1);
 var canEditDuration = ref(1);
@@ -95,9 +136,6 @@ var canEditDuration = ref(1);
 const isAdmin = ref(false);
 const canEdit = ref(false);
 const isScrumMaster = ref(false);
-
-
-
 
 supabase.auth.onAuthStateChange(async (_, session) => {
   if (session) {
@@ -114,8 +152,8 @@ const headers = ref([
   { title: 'Name', key: 'name' },
   { title: 'Start date', key: 'start_date' },
   { title: 'End date', key: 'end_date' },
-  { title: 'Project', key: 'project_name'},
-  { title: 'Duration (pts.)', key: 'duration'},
+  { title: 'Project', key: 'project_name' },
+  { title: 'Duration (pts.)', key: 'duration' },
 ]);
 
 // const userId = await (await supabase.auth.getUser()).data.user?.id;
@@ -125,7 +163,7 @@ const headers = ref([
 async function checkScrumMaster() {
   const userId = await (await supabase.auth.getUser()).data.user?.id;
 
-  const {data, error} = await supabase
+  const { data, error } = await supabase
     .from('project_role')
     .select('role')
     .eq('user_id', userId)
@@ -136,10 +174,8 @@ async function checkScrumMaster() {
   } else {
     isScrumMaster.value = data.length > 0;
     return data.length > 0;
-    
   }
 }
-
 
 const items = ref<any[]>([]);
 const isLoading = ref(true);
@@ -191,11 +227,15 @@ const validateSprint = (sprintData) => {
       }
     }
   });
-  return sprintOverlap.value; 
-}
+  return sprintOverlap.value;
+};
 
 async function editSprint() {
-  if (sprintData.value.name === '' || sprintData.value.start_date.length === 0 || sprintData.value.end_date.length === 0) {
+  if (
+    sprintData.value.name === '' ||
+    sprintData.value.start_date.length === 0 ||
+    sprintData.value.end_date.length === 0
+  ) {
     return;
   }
   if (!validateSprintDates()) return false;
@@ -208,21 +248,21 @@ async function editSprint() {
   //var duration = countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8 / 6;
   // round to int
   //duration = Math.round(duration)
-  console.log(sprintData)
+  console.log(sprintData);
   //console.log(sprintData.value.start_date)
   var duration = Number(sprintData.value.duration);
-  if (1000 < duration || duration < 0){
+  if (1000 < duration || duration < 0) {
     showSprintError.value = true;
     return false;
   }
   const updates = {
-      id: sprintData.value.id,
-      name: sprintData.value.name,
-      start_date: sprintData.value.start_date,
-      end_date: sprintData.value.end_date,
-      duration: sprintData.value.duration,
-      project_id: sprintData.value.project_id,
-    };
+    id: sprintData.value.id,
+    name: sprintData.value.name,
+    start_date: sprintData.value.start_date,
+    end_date: sprintData.value.end_date,
+    duration: sprintData.value.duration,
+    project_id: sprintData.value.project_id,
+  };
 
   const { error } = await supabase.from('sprints').upsert(updates);
   // const {error} = await supabase
@@ -241,17 +281,20 @@ async function editSprint() {
     showSuccessMessage.value = false;
     fetchSprints();
   }, 3000);
-  
-};
+}
 
 const showSprintEdit = (click, item) => {
   if (!canEdit.value) return;
-  // test if it's current sprint - we can only edit the duration 
-  // if it's a future sprint everything is editable 
-  var start_date_details = item.item.start_date.split(" ")[0].split(".");
-  var start_date = new Date(start_date_details[2], start_date_details[1]-1, start_date_details[0]);
-  var end_date_details = item.item.end_date.split(" ")[0].split(".");
-  var end_date = new Date(end_date_details[2], end_date_details[1]-1, end_date_details[0]);
+  // test if it's current sprint - we can only edit the duration
+  // if it's a future sprint everything is editable
+  var start_date_details = item.item.start_date.split(' ')[0].split('.');
+  var start_date = new Date(
+    start_date_details[2],
+    start_date_details[1] - 1,
+    start_date_details[0]
+  );
+  var end_date_details = item.item.end_date.split(' ')[0].split('.');
+  var end_date = new Date(end_date_details[2], end_date_details[1] - 1, end_date_details[0]);
   // console.log("Start date ", start_date);
   // console.log("end date ", end_date);
   if (start_date > new Date(minDate) && end_date > new Date(minDate)) {
@@ -272,7 +315,6 @@ const showSprintEdit = (click, item) => {
   sprintData.value.start_date = start_date.toDateString();
   showSprintEditDlg.value = true;
 };
-
 
 const countWeekdays = (startDate, endDate) => {
   // Parse the start and end dates from strings to Date objects
@@ -307,16 +349,21 @@ const validateWeekend = (date) => {
 const validateSprintDates = () => {
   showSprintError.value = true;
   console.log(sprintData);
-  if (!validateWeekend(sprintData.value.start_date) || !validateWeekend(sprintData.value.end_date)) {
+  if (
+    !validateWeekend(sprintData.value.start_date) ||
+    !validateWeekend(sprintData.value.end_date)
+  ) {
     showSprintError.value = true;
     return false;
   }
   if (sprintData.value.start_date > sprintData.value.end_date) {
-
     showSprintError.value = true;
     return false;
   }
-  if (new Date(sprintData.value.start_date) < new Date(minDate) || new Date(sprintData.value.end_date) < new Date(minDate)) {
+  if (
+    new Date(sprintData.value.start_date) < new Date(minDate) ||
+    new Date(sprintData.value.end_date) < new Date(minDate)
+  ) {
     if (canEditDuration.value == 0) {
       showSprintError.value = false;
       return true;
@@ -330,15 +377,10 @@ const validateSprintDates = () => {
 
 async function fetchSprints() {
   items.value = [];
-  const organizationId = localStorage.getItem('organizationId');  
-//   const { data, error } = await supabase
-//     .from('sprints')
-//     .select('*, project:project_id(*)');
-    const {data, error} = await supabase
-    .from('project')
-    .select('id, name, organization_id, sprints(*)')
-    .eq('organization_id', organizationId);
-
+  //   const { data, error } = await supabase
+  //     .from('sprints')
+  //     .select('*, project:project_id(*)');
+  const { data, error } = await supabase.from('project').select('id, name, sprints(*)');
 
   if (error) {
     console.error('Error fetching sprints', error);
@@ -367,5 +409,4 @@ async function fetchSprints() {
 watchEffect((isScrumMaster) => {
   canEdit.value = Boolean(isAdmin.value || isScrumMaster);
 });
-
 </script>

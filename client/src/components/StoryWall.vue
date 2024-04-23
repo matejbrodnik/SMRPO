@@ -170,11 +170,9 @@ export default defineComponent({
       storiesActiveUnassigned.value = [];
       isScrum.value = false;
       isOwner.value = false;
-      const organizationId = localStorage.getItem('organizationId');
       const { data: projects, error } = await supabase
         .from('project')
         .select('id, name, user_story(*)')
-        .eq('organization_id', organizationId)
         .eq('id', selectedProject.value.id)
       if (error) {
         console.error(error);

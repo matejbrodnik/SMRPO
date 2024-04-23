@@ -19,23 +19,31 @@
           <!-- <v-row dense>
             <v-text-field v-model="dlgData.email" label="E-mail" readonly></v-text-field>
           </v-row> -->
-          <!-- <v-row dense>
+          <v-row dense>
             <v-text-field
               v-model="dlgData.password"
               label="Choose password"
               type="password"
               :rules="[rules.password]"
               required></v-text-field>
-          </v-row> -->
+          </v-row>
+
           <v-row dense>
-            <v-combobox
-              v-model="selectedOrgs"
-              :items="dlgData.organizations"
-              label="Organizations"
-              :item-title="(item) => item.name"
-              :item-value="(item) => item.name"
-              :rules="[rules.required, rules.organization]"
-              multiple></v-combobox>
+            <v-text-field
+              v-model="dlgData.repeatPassword"
+              label="Repeat password"
+              type="password"
+              :rules="[rules.passwordsMatch(dlgData.password)]"
+              required></v-text-field>
+          </v-row>
+
+          <v-row dense>
+            <v-text-field
+              v-model="dlgData.email"
+              label="E-mail"
+              :rules="[rules.required, rules.email]"
+              required>
+            </v-text-field>
           </v-row>
           <v-row>
             <v-radio-group v-model="dlgData.rights" inline label="Sistem rights:" :disabled="false">
@@ -71,16 +79,16 @@ export default defineComponent({
     const show = ref(false);
     const dlgData = ref({
       password: '',
+      repeatPassword: '',
       name: '',
       surname: '',
       email: '',
       rights: 'user',
-      organizations: [],
-      selectedOrganizations: [],
     });
 
-    const selectedOrgs = ref([]);
     const queryClient = useQueryClient();
+
+    const originalEmail = ref('');
 
     watch(
       () => props.user,
@@ -90,21 +98,14 @@ export default defineComponent({
           ...dlgData.value,
           ...user,
         };
-        // Fetch all organizations
-        const { data: orgData, error: orgError } = await supabase.from('organization').select('*');
-        if (orgError) {
-          console.error('Error fetching organizations:', orgError.message);
-        } else {
-          dlgData.value.organizations = orgData;
-        }
+
+        originalEmail.value = user.email;
 
         // Fetch user role
         const { data: userRoleData, error: userRoleError } = await supabase
           .from('user_roles')
           .select('*')
           .eq('user_id', user.user_id);
-        /*
-         */
 
         console.log('userRoleData', userRoleData);
         if (userRoleError) {
@@ -112,26 +113,6 @@ export default defineComponent({
         } else {
           dlgData.value.rights = userRoleData[0]?.role;
         }
-
-        // Fetch organizations the user belongs to
-        const { data: userOrgData, error: userOrgError } = await supabase
-          .from('orgs_users')
-          .select('*')
-          .eq('user_id', user.user_id);
-        if (userOrgError) {
-          console.error('Error fetching user organizations:', userOrgError.message);
-        } else {
-          dlgData.value.selectedOrganizations = userOrgData;
-        }
-      }
-    );
-
-    watch(
-      () => dlgData.value.selectedOrganizations,
-      (newVal) => {
-        selectedOrgs.value = newVal?.map((org) =>
-          dlgData.value.organizations.find((o) => o.id === org.org_id)
-        );
       }
     );
 
@@ -164,8 +145,8 @@ export default defineComponent({
     const form = ref(null);
 
     const saveNewUser = async () => {
-      console.log('saveNewUser', await form.value.validate());
-      if (await form.value.validate()) {
+      const validation = await form.value.validate();
+      if (validation.valid) {
         const { data, error } = await supabase
           .from('user_profile')
           .update({
@@ -177,32 +158,42 @@ export default defineComponent({
         if (error) {
           console.error('Error saving user:', error.message);
         } else {
-          console.log('User saved:', data);
-          show.value = false;
           await queryClient.invalidateQueries({
             queryKey: ['users'],
           });
         }
 
-        selectedOrgs.value.map((org) => ({
-          user_id: dlgData.value.user_id,
-          org_id: org.id,
-        }));
-
-        await supabase.from('orgs_users').delete().eq('user_id', dlgData.value.user_id);
-        await supabase.from('orgs_users').insert(
-          selectedOrgs.value.map((org) => ({
-            user_id: dlgData.value.user_id,
-            org_id: org.id,
-          }))
-        );
-
+        // Update user role
         await supabase
           .from('user_roles')
           .update({ role: dlgData.value.rights })
           .eq('user_id', dlgData.value.user_id);
 
-        console.log;
+        // update password
+        if (dlgData.value.password && dlgData.value.password.length >= 8) {
+          // Update the user's password
+          const body = JSON.stringify({
+            user_id: dlgData.value.user_id,
+            password: dlgData.value.password,
+          });
+          console.log('body password', body);
+          const { data, error } = await supabase.functions.invoke('updatePasswordUser', {
+            body: body,
+          });
+          console.log('data password', data);
+          console.log('error password', error);
+        }
+
+        if (dlgData.value.email !== originalEmail.value) {
+          const { error: emailError } = await supabase.auth.updateUser({
+            email: dlgData.value.email,
+          });
+          if (emailError) {
+            console.log('Error updating email: ', emailError);
+          }
+        }
+
+        show.value = false;
       }
     };
 
@@ -211,7 +202,6 @@ export default defineComponent({
       dlgData,
       rules,
       form,
-      selectedOrgs,
       deleteAccount,
       saveNewUser,
     };
