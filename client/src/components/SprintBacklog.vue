@@ -45,7 +45,9 @@
                         <th>Description</th>
                         <th>Suggested developer</th>
                         <th>Assigned developer</th>
-                        <th>Duration [h]</th>
+                        <th>Logged time [h]</th>
+                        <th>Remaining time [h]</th>
+                        <th>Estimated time [h]</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -63,38 +65,45 @@
                           {{ subtask.developer }}
                         </td>
 
-                      <td>{{ subtask.assigned_developer }}</td>
-                      <td>
-                        {{ subtask.estimated_time }}
-                      </td>
-                      <td>
-                        <v-btn
-                          color="green"
-                          v-if="checkTaskCanBeAccepted && !subtask.assigned_developer_id"
-                          @click="acceptSubtask(subtask)"
-                          >Accept</v-btn
-                        >
-                        <v-btn
-                          color="red"
-                          v-if="
+                        <td>{{ subtask.assigned_developer }}</td>
+                        <td>
+                          {{ subtask.loggedTimeSum }}
+                        </td>
+                        <td>
+                          {{ subtask.remainingTime }}
+                        </td>
+                        <td>
+                          {{ subtask.estimated_time }}
+                        </td>
+                        <td>
+                          <v-btn color="green" v-if="checkTaskCanBeAccepted && !subtask.assigned_developer_id"
+                            @click="acceptSubtask(subtask)">Accept</v-btn>
+                          <v-btn color="red" v-if="
                             subtask.assigned_developer_id === user_profile_id.valueOf() &&
                             !subtask.is_done
-                          "
-                          @click="rejectSubtask(subtask)"
-                          >Reject</v-btn
-                        >
-                      </td>
-                    </tr>
-                    <tr>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td>Sum: {{ userStories[index].timeSum }} h</td>
-                    </tr>
-                  </tbody>
-                </v-table>
-              </v-card>
+                          " @click="rejectSubtask(subtask)">Reject</v-btn>
+                        </td>
+                        <td>
+                          <v-btn color="white" v-if="
+                            subtask.assigned_developer_id === user_profile_id.valueOf() &&
+                            !subtask.is_done
+                          " @click="openLogTimeDialog(subtask)">
+                            Log time
+                          </v-btn>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>Total logged time: {{ userStories[index].loggedTimeSum }}</td>
+                        <td></td>
+                        <td>Estimated time sum: {{ userStories[index].timeSum }} h</td>
+                      </tr>
+                    </tbody>
+                  </v-table>
+                </v-card>
 
                 <v-dialog v-model="showDialog" style="max-width: 800px">
                   <v-card>
@@ -116,6 +125,22 @@
                       <v-spacer></v-spacer>
                       <v-btn @click="showDialog = false">Close</v-btn>
                     </v-card-actions>
+                  </v-card>
+                </v-dialog>
+
+
+                <v-dialog v-model="showLogTimeDialog" class="dlgWindow" width="50%" >
+                  <v-card>
+                    <v-card-title>Log time</v-card-title>
+                    <v-card-actions>
+                      <v-btn color="green" v-if="!activeSessionExists" @click="startSession()">
+                        Start session
+                      </v-btn>
+                      <v-btn color="red" v-if="activeSessionExists" @click="endSession()">
+                        End session
+                      </v-btn>
+                    </v-card-actions>
+
                   </v-card>
                 </v-dialog>
               </div>
@@ -174,6 +199,8 @@ const hasNoUserStories = ref(false);
 const userStories = ref<any[]>([]);
 
 const showDialog = ref(false);
+const showLogTimeDialog = ref(false);
+const activeSessionExists = ref(false);
 const storyName = ref('');
 const activeIndex = ref(0);
 
@@ -313,6 +340,7 @@ async function getUserStories() {
   } else {
     userStories.value = data;
     for (const story of userStories.value) {
+      await getLoggedTimes(story);
       await getSubtasks(story);
     }
   }
@@ -321,14 +349,28 @@ async function getUserStories() {
 async function getSubtasks(userStory: any) {
   const { data, error } = await supabase
     .from('subtasks')
-    .select('id, description, estimated_time, developer_id, is_done, assigned_developer_id')
+    .select('id, description, estimated_time, developer_id, is_done, assigned_developer_id, user_story_id')
     .eq('user_story_id', userStory.id);
   if (error) {
     console.error('Error fetching subtasks');
   } else {
     userStory.subtasks = data;
     const timeSum = ref(0);
+    
     for (const subtask of userStory.subtasks) {
+
+      const loggedTimeSum = ref(0);
+
+      
+      for (const index in userStory.loggedTimes) {
+
+        var timelog = userStory.loggedTimes.at(index)
+        if (timelog.subtask_id === subtask.id) {
+          loggedTimeSum.value += parseFloat(timelog.duration.toFixed(2));
+        }
+      }
+
+      subtask.loggedTimeSum = loggedTimeSum.value;
 
       if (subtask.assigned_developer_id) {
         const { data: assignedDeveloper } = await supabase
@@ -352,6 +394,8 @@ async function getSubtasks(userStory: any) {
       subtask.estimated_time = parseFloat(subtask.estimated_time.toFixed(1));
 
       timeSum.value += subtask.estimated_time;
+
+      subtask.remainingTime = subtask.estimated_time - subtask.loggedTimeSum;
     }
     userStory.timeSum = timeSum.value;
   }
@@ -465,6 +509,23 @@ async function rejectSubtask(subtask: any) {
   }
 }
 
+async function getLoggedTimes(userStory: any) {
+  const { data, error } = await supabase 
+    .from('subtask_timelog')
+    .select('*')
+    .eq('user_story', userStory.id);
+  if (error) {
+    console.error('Error fetching logged times');
+  } else {
+    userStory.loggedTimes = data;
+    const timeSum = ref(0);
+    for (const log of userStory.loggedTimes) {
+      timeSum.value += parseFloat(log.duration.toFixed(2));
+    }
+    userStory.loggedTimeSum = timeSum.value;
+  }
+}
+
 const checkRules = (field: any, duration = false) => {
   let rules = [(v) => !!v || `${field} is required`];
   if (duration) {
@@ -472,4 +533,178 @@ const checkRules = (field: any, duration = false) => {
   }
   return rules;
 };
+
+const currentSubtask = ref({
+  id: '',
+  developer_id: '',
+  user_story_id: '',
+});
+
+function openLogTimeDialog(item: any) {
+  showLogTimeDialog.value = true;
+  // todo:
+  /*
+  check if there is active session
+  set activeSessionExists to true if there is active session
+  filter sessions for this user and this subtask 
+  fill table to show logged time
+  sorted by time
+  */
+  // console.log(item);
+  // console.log(item.id);
+  currentSubtask.value.id = item.id;
+  currentSubtask.value.developer_id = item.assigned_developer_id;
+  currentSubtask.value.user_story_id = item.user_story_id;  // filter userstory.loggedTimes for this subtask
+  for (const story of userStories.value) {
+    if (story.id === item.user_story_id) {
+      console.log(story.loggedTimes);
+      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === item.id && log.user_id === item.assigned_developer_id); 
+      break;
+    }
+  }
+  console.log(subtaskTimeLogs);
+  for (const timelog of subtaskTimeLogs) {
+    if (timelog.is_active) {
+      activeSessionExists.value = true;
+      break;
+  }
+}
+}
+
+const closeLogTimeDialog = () => {
+  showLogTimeDialog.value = false;
+  activeSessionExists.value = true;
+  currentSubtask.value = {
+    id: '',
+    developer_id: '',
+    user_story_id: '',
+  }
+  // clear all other set variables as needed
+}
+
+async function startSession() {
+  console.log('Starting session');
+
+  const { error } = await supabase.from('subtask_timelog').insert([
+    {
+      subtask_id: currentSubtask.value.id,
+      user_id: currentSubtask.value.developer_id,
+      user_story: currentSubtask.value.user_story_id,
+      // start_time: new Date(),
+      // duration: 0,
+      is_active: true,
+    },
+  ]);
+  if (error) {
+    console.log('error starting session');
+    console.log(error);
+  } else {
+    console.log('Session started');
+    closeLogTimeDialog();
+
+    await getUserStories();
+  }
+}
+
+async function endSession() {
+  console.log('Ending session');
+  // check if there are two sessions happening on the same day (today)
+  const today = new Date();
+
+  for (const story of userStories.value) {
+    if (story.id === currentSubtask.value.user_story_id) {
+      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === currentSubtask.value.id && log.user_id === currentSubtask.value.developer_id); 
+      break;
+    }
+  }
+  for (const timelog of subtaskTimeLogs) {
+    if (timelog.is_active) {
+      var activeSession = timelog;
+      break;
+    }
+  }
+
+
+
+  var count = 0;
+  for (const timelog of subtaskTimeLogs) {
+    if (areSameDate(new Date(timelog.start_time), today)) {
+      count++;
+      if (timelog.is_active != true) {
+        var inactiveSession = timelog;
+        console.log("inactive session");
+        console.log(inactiveSession);
+      }
+    }
+  }
+
+  var duration = getDifferenceInHours(new Date(activeSession.start_time), today);
+  console.log(duration);
+
+  if (count > 1) {
+    console.log('There are two active sessions today');
+    duration = duration + parseFloat(inactiveSession.duration);
+    console.log(duration);
+
+    const { error: deleteError } = await supabase.from('subtask_timelog').delete().eq('id', activeSession.id);
+    if (deleteError) {
+      console.log('error ending session');
+      console.log(deleteError);
+    } else {
+      console.log('Session deleted');
+    }
+
+    const {error} = await supabase.from('subtask_timelog').update([
+      {
+        duration: duration,
+        is_active: false,
+      }
+    ]).eq('id', inactiveSession.id);
+    if (error) {
+      console.log('error ending session');
+      console.log(error);
+    } else {
+      console.log('Session ended');
+      closeLogTimeDialog();
+    }
+  } else {
+    const {error} = await supabase.from('subtask_timelog').update([
+      {
+        duration: duration,
+        is_active: false,
+      }
+    ]).eq('id', activeSession.id);
+    if (error) {
+      console.log('error ending session');
+      console.log(error);
+    } else {
+      console.log('Session ended');
+      closeLogTimeDialog();
+    }
+  }
+
+  
+  closeLogTimeDialog();
+
+  await getUserStories();
+
+
+}
+
+function areSameDate(date1: Date, date2: Date) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
+}
+
+function getDifferenceInHours(date1, date2) {
+    // Difference in milliseconds
+    const difference = date2 - date1;
+
+    // Convert milliseconds to hours
+    const hours = difference / (1000 * 60 * 60);
+
+    return hours;
+}
+
 </script>
