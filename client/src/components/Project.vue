@@ -271,6 +271,7 @@
 import { onMounted, ref } from 'vue';
 import { formatDateTime } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
+import { endOfDay } from 'date-fns';
 
 onMounted(() => {
   getProjects();
@@ -511,6 +512,14 @@ async function saveSprint() {
     return;
   }
   sprintOverlap.value = false;
+
+  var start_date = new Date(sprintData.value.start_date);
+  var end_date = new Date(sprintData.value.end_date);
+  start_date = new Date(start_date.setHours(start_date.getHours() + 3));
+  end_date = new Date(end_date.setHours(end_date.getHours() + 3));
+
+  sprintData.value.start_date = start_date.toISOString();
+  sprintData.value.end_date = end_date.toISOString();
 
   var duration = (countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8) / 6;
   // round to int
