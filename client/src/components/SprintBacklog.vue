@@ -48,6 +48,8 @@
                         <th>Logged time [h]</th>
                         <th>Remaining time [h]</th>
                         <th>Estimated time [h]</th>
+                        <th></th>
+                        <th></th>
                       </tr>
                     </thead>
                     <tbody>
