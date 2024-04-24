@@ -96,7 +96,7 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, watchEffect } from 'vue';
 import { getProjects } from '../functions/helperFunctions';
-import { formatDateTime } from '../lib/dateFormatter';
+import { formatDateTime, formatDate } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
 
 
@@ -180,8 +180,8 @@ const resetFormAndCloseDialog = () => {
   sprintData.value = {
     name: '',
     duration: '',
-    startDate: ref(Date),
-    endDate: ref(Date),
+    start_date: '',
+    end_date: '',
     project_id: '',
     id: '',
   }; // Reset form data
@@ -233,6 +233,15 @@ async function editSprint() {
   //var duration = countWeekdays(sprintData.value.start_date, sprintData.value.end_date) * 8 / 6;
   // round to int
   //duration = Math.round(duration)
+
+  var start_date = new Date(sprintData.value.start_date);
+  var end_date = new Date(sprintData.value.end_date);
+  start_date = new Date(start_date.setHours(start_date.getHours() + 3));
+  end_date = new Date(end_date.setHours(end_date.getHours() + 3));
+
+  sprintData.value.start_date = start_date.toISOString();
+  sprintData.value.end_date = end_date.toISOString();
+
   console.log(sprintData);
   //console.log(sprintData.value.start_date)
   var duration = Number(sprintData.value.duration);
@@ -379,8 +388,8 @@ async function fetchSprints() {
     }
 
     sprints.value.forEach((sprint) => {
-      sprint.formatted_start_date = formatDateTime(sprint.start_date);
-      sprint.formatted_end_date = formatDateTime(sprint.end_date);
+      sprint.formatted_start_date = formatDate(sprint.start_date);
+      sprint.formatted_end_date = formatDate(sprint.end_date);
       sprint.start_date = formatDateTime(sprint.start_date);
       sprint.end_date = formatDateTime(sprint.end_date);
       sprint.project_id = projectId;
