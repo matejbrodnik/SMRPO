@@ -1,116 +1,76 @@
 <template>
-  <v-dialog v-model="showSprintEditDlg" class="dlgWindow" width="50%">
-    <v-card title="Edit sprint">
-      <v-card-text>
-        <!-- Edit start date, end date and name -->
-        <v-row dense>
-          <!-- row to show errors when entering things -->
-          <v-col cols="12">
-            <v-alert id="sprintError" v-if="showSprintError" type="error" elevation="2" colored>
-              Start and end date must be weekdays, and not in the past. Start date must be before
-              end date.
-            </v-alert>
-            <v-alert v-if="sprintOverlap">
-              Overlap with existing sprint, please change dates or name.
-            </v-alert>
-            <v-alert v-if="showSuccessMessage" type="success">
-              Sprint edited successfully!
-            </v-alert>
-          </v-col>
-          <v-col cols="7">
-            <v-text-field
-              :disabled="canEditSprint == 1"
-              v-model="sprintData.name"
-              label="Name"
-              required></v-text-field>
-          </v-col>
+  <v-dialog v-model="showSprintEditDlg" class="dlgWindow" width="70%">
+          <v-card title="Edit sprint">
+            <v-card-text>
+              <!-- Edit start date, end date and name -->
+              <v-row dense>
+                <!-- row to show errors when entering things -->
+                <v-col cols="12">
+                  <v-alert id="sprintError" v-if="showSprintError" type="error" elevation="2" colored>
+                    Start and end date must be weekdays, and not in the past.
+                    Start date must be before end date.
+                  </v-alert>
+                  <v-alert v-if="sprintOverlap">
+                    Overlap with existing sprint, please change dates or name.
+                  </v-alert>
+                  <v-alert v-if="showSuccessMessage" type="success">
+                    Sprint edited successfully!
+                  </v-alert>
 
-          <v-divider></v-divider>
-          <v-col cols="3">
-            <v-text-field
-              :disabled="canEditDuration == 1"
-              v-model="sprintData.duration"
-              label="Duration (pts.)"
-              required></v-text-field>
-          </v-col>
-          <v-divider></v-divider>
-          <v-col cols="4">
-            <v-menu
-              v-model="showDatePickerStart"
-              :close-on-content-click="false"
-              :nudge-right="40"
-              transition="scale-transition"
-              offset-y
-              min-width="290px">
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  :disabled="canEditSprint == 1"
-                  v-model="sprintData.start_date"
-                  @click="showDatePickerStart = true"
-                  label="Start date"
-                  prepend-icon="mdi-calendar"
-                  v-bind="attrs"
-                  v-on="on"></v-text-field>
 
-                <v-date-picker
-                  v-model="sprintData.start_date"
-                  @input="showDatePickerStart = false"
-                  v-if="showDatePickerStart"
-                  no-title>
-                  <v-spacer></v-spacer>
-                </v-date-picker>
-              </template>
-            </v-menu>
-          </v-col>
-          <!-- <v-divider></v-divider> -->
-          <v-col cols="4">
-            <v-menu
-              v-model="showDatePickerEnd"
-              :close-on-content-click="false"
-              :nudge-right="40"
-              transition="scale-transition"
-              offset-y
-              min-width="290px">
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  :disabled="canEditSprint == 1"
-                  v-model="sprintData.end_date"
-                  @click="showDatePickerEnd = true"
-                  label="End date"
-                  prepend-icon="mdi-calendar"
-                  v-bind="attrs"
-                  v-on="on"></v-text-field>
+                </v-col>
+                <v-col cols="7">
+                  <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.name" label="Name" required></v-text-field>
+                </v-col>
+                
+                <v-divider></v-divider>
+                <v-col cols="3">
+                  <v-text-field :disabled="canEditDuration == 1" v-model="sprintData.duration" label="Duration (pts.)" required></v-text-field>
+                </v-col>
+                <v-divider></v-divider>
+                <v-col cols="4">
+                  <!-- <v-menu v-model="showDatePickerStart" :close-on-content-click="false" :nudge-right="40"
+                    transition="scale-transition" offset-y min-width="290px">
+                    <template v-slot:activator="{ on, attrs }"> -->
+                    <v-text-field :disabled="canEditSprint == 1" v-model="sprintData.start_date" @click="showDatePickerStart = true" label="Start date"
+                      prepend-icon="mdi-calendar" v-bind="attrs"
+                        v-on="on"></v-text-field>
 
-                <v-date-picker
-                  v-model="sprintData.end_date"
-                  v-if="showDatePickerEnd"
-                  no-title></v-date-picker>
-              </template>
-            </v-menu>
-          </v-col>
-        </v-row>
-      </v-card-text>
+                    <!-- <v-date-picker v-model="sprintData.start_date" @input="showDatePickerStart = false" -->
+                      <v-date-picker v-model="sprintData.start_date" locale="de"
+                      v-if="showDatePickerStart" no-title>
+                      <v-spacer></v-spacer>
 
-      <v-divider></v-divider>
-      <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn
-          text="Close"
-          variant="text"
-          @click="
-            showSprintEditDlg = false;
-            resetFormAndCloseDialog();
-          "></v-btn>
-        <v-btn
-          :disabled="canEditDuration == 1"
-          text="Save"
-          variant="text"
-          @click="editSprint"></v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+                    </v-date-picker>
+                  <!-- </template>
+                  </v-menu> -->
+                </v-col>
+                <!-- <v-divider></v-divider> -->
+                <v-col cols="4" >
+                  <!-- <v-menu v-model="showDatePickerEnd" :close-on-content-click="false" :nudge-right="40"
+                    transition="scale-transition" offset-y min-width="290px">
+                    <template v-slot:activator="{ on, attrs }"> -->
+                  <v-text-field  :disabled="canEditSprint == 1" v-model="sprintData.end_date" @click="showDatePickerEnd = true" label="End date"
+                    prepend-icon="mdi-calendar" v-bind="attrs"
+                        v-on="on"></v-text-field>
 
-  <div style="margin: 30px auto; max-width: 80%">
+                  <v-date-picker v-model="sprintData.end_date" v-if="showDatePickerEnd && canEditSprint == 0" no-title
+                     ></v-date-picker>
+                  <!-- </template>
+                  </v-menu> -->
+                </v-col>
+              </v-row>
+            </v-card-text>
+
+            <v-divider></v-divider>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn text="Close" variant="text" @click="showSprintEditDlg = false; resetFormAndCloseDialog()"></v-btn>
+              <v-btn :disabled="canEditDuration == 1" text="Save" variant="text" @click="editSprint"></v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+       <div style="margin: 30px auto; max-width: 80%">
     <div v-if="isLoading">Loading...</div>
     <v-select
       v-else
@@ -138,6 +98,8 @@ import { onMounted, ref, watch, watchEffect } from 'vue';
 import { getProjects } from '../functions/helperFunctions';
 import { formatDateTime } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
+
+
 
 onMounted(() => {
   fetchProjects();
@@ -172,9 +134,9 @@ supabase.auth.onAuthStateChange(async (_, session) => {
 
 const headers = ref([
   { title: 'Name', key: 'name' },
-  { title: 'Start date', key: 'start_date' },
-  { title: 'End date', key: 'end_date' },
-  { title: 'Duration (pts.)', key: 'duration' },
+  { title: 'Start date', key: 'formatted_start_date' },
+  { title: 'End date', key: 'formatted_end_date' },
+  { title: 'Duration (pts.)', key: 'duration'},
 ]);
 
 // const userId = await (await supabase.auth.getUser()).data.user?.id;
@@ -213,11 +175,13 @@ const sprintData = ref({
 const resetFormAndCloseDialog = () => {
   canEditDuration.value = 1;
   canEditSprint.value = 1;
+  showDatePickerEnd.value = false;
+  showDatePickerStart.value = false;
   sprintData.value = {
     name: '',
     duration: '',
-    startDate: '',
-    endDate: '',
+    startDate: ref(Date),
+    endDate: ref(Date),
     project_id: '',
     id: '',
   }; // Reset form data
@@ -306,16 +270,12 @@ async function editSprint() {
 
 const showSprintEdit = (click, item) => {
   if (!canEdit.value) return;
-  // test if it's current sprint - we can only edit the duration
-  // if it's a future sprint everything is editable
-  var start_date_details = item.item.start_date.split(' ')[0].split('.');
-  var start_date = new Date(
-    start_date_details[2],
-    start_date_details[1] - 1,
-    start_date_details[0]
-  );
-  var end_date_details = item.item.end_date.split(' ')[0].split('.');
-  var end_date = new Date(end_date_details[2], end_date_details[1] - 1, end_date_details[0]);
+  // test if it's current sprint - we can only edit the duration 
+  // if it's a future sprint everything is editable 
+  var start_date_details = item.item.formatted_start_date.split(" ")[0].split(".");
+  var start_date = new Date(start_date_details[2], start_date_details[1]-1, start_date_details[0]);
+  var end_date_details = item.item.formatted_end_date.split(" ")[0].split(".");
+  var end_date = new Date(end_date_details[2], end_date_details[1]-1, end_date_details[0]);
   // console.log("Start date ", start_date);
   // console.log("end date ", end_date);
   if (start_date > new Date(minDate) && end_date > new Date(minDate)) {
@@ -332,8 +292,8 @@ const showSprintEdit = (click, item) => {
   sprintData.value.id = item.item.id;
   sprintData.value.project_id = item.item.project_id;
   sprintData.value.duration = item.item.duration;
-  sprintData.value.end_date = end_date.toDateString();
-  sprintData.value.start_date = start_date.toDateString();
+  sprintData.value.end_date = end_date;
+  sprintData.value.start_date = start_date;
   showSprintEditDlg.value = true;
 };
 
@@ -419,6 +379,8 @@ async function fetchSprints() {
     }
 
     sprints.value.forEach((sprint) => {
+      sprint.formatted_start_date = formatDateTime(sprint.start_date);
+      sprint.formatted_end_date = formatDateTime(sprint.end_date);
       sprint.start_date = formatDateTime(sprint.start_date);
       sprint.end_date = formatDateTime(sprint.end_date);
       sprint.project_id = projectId;
