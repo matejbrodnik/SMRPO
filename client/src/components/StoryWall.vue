@@ -2,7 +2,7 @@
   <div>
     <v-data-iterator :items="storiesActiveAssigned" item-value="name">
       <template v-slot:default="{ items }">
-        <v-text-field>Active user stories | Sprint velocity: {{ sprintDuration }} pts | Load: {{ sprintLoad }}
+        <v-text-field>Active user stories | Sprint velocity: {{ sprintDuration }} pts | Load: {{ sprintLoad }} pts
         </v-text-field>
         <v-row style="margin-bottom: 5px;">
           <v-col v-for="(item, index) in items" :key="item.raw.id" cols="12" lg="3" md="3" sm="6">
@@ -34,7 +34,7 @@
   >
     <template v-slot:default="{ items }">
       <v-text-field>Unfinished user stories
-        <v-btn @click="addToSprint(items)" prepend-icon="mdi-plus"  style="margin-left: 10px;" v-if="items.some((el) => el.selected)">
+        <v-btn @click="addToSprint(items)" prepend-icon="mdi-plus"  style="margin-left: 10px;" v-if="items.some((el) => el.selected) && isScrum">
               Add to sprint
         </v-btn>
       </v-text-field>
@@ -214,28 +214,6 @@ export default defineComponent({
       }
     }
 
-    async function fetchStoriesTests(edit: boolean) {
-      const { data, error } = await supabase
-        .from('user_stories_tests')
-        .select('description, is_done')
-        .eq('project_id', selectedProject.value.id)
-        .eq('user_id', userId.value);
-      if (error) {
-        console.error(error);
-        return;
-      }
-      if (edit) {
-        dlgEditStory.value.dlgData.tests = data
-        console.log("data")
-        console.log(data)
-      }
-      else {
-        dlgNewStory.value.dlgData.tests = data
-        console.log("data")
-        console.log(data)
-      }
-    }
-
     function newStory() {
       console.log(storiesNext.value)
       dlgNewStory.value.isScrum = isScrum.value;
@@ -260,12 +238,20 @@ export default defineComponent({
     async function editStory(item: any, event) {
       if (event.ctrlKey)
         return;
-      const { data, error } = await supabase
+      const { data: tests, error } = await supabase
         .from('user_story_tests')
         .select('id, description, is_done')
         .eq('user_story_id', item.raw.id);
       if (error) {
         console.error(error);
+        return;
+      }
+      const { data: comments, error: error1 } = await supabase
+        .from('user_story_comments')
+        .select('comment, user_name, rejected')
+        .eq('user_story_id', item.raw.id);
+      if (error1) {
+        console.error(error1);
         return;
       }
 
@@ -274,25 +260,32 @@ export default defineComponent({
       dlgEditStory.value.dlgData = item.raw;
       dlgEditStory.value.edit = true;
       dlgEditStory.value.currentProjectId = selectedProject.value.id;
-      dlgEditStory.value.dlgData.tests = data
+      dlgEditStory.value.dlgData.tests = tests
+      dlgEditStory.value.dlgData.comments = comments
       dlgEditStory.value.show = true;
+      dlgEditStory.value.userId = userId.value;
     }
 
     async function getCurrentSprint() {
-      console.log("AAAAAAAAA");
-      console.log(selectedProject.value.id);
+      const currentDate = new Date();
       const { data, error } = await supabase
-          .from('sprints')
-          .select('id, name, duration')
-          .eq('project_id', selectedProject.value.id)
-          .order('start_date', { ascending: false })
-          .limit(1);
+        .from('sprints')
+        .select('id, name, start_date, end_date, duration')
+        .eq('project_id', selectedProject.value.id);
       if (error)
         console.error('Error fetching sprints');
-      else if (data.length > 0) {
-        sprintDuration.value = data[0].duration;
-        return data[0];
+      else if (data) {
+        for (const sprint of data) {
+          if (new Date(sprint.start_date) < currentDate && new Date(sprint.end_date) > currentDate) {
+            sprintDuration.value = sprint.duration;
+            return sprint;
+          }
+        }
       }
+      // else if (data.length > 0) {
+      //   sprintDuration.value = data[0].duration;
+      //   return data[0];
+      // }
     }
 
     async function addToSprint(items: any) {

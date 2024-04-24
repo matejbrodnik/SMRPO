@@ -12,13 +12,48 @@
             </p>
           </v-col>
           <v-col cols="2">
-            <v-btn v-if="dlgData.comment != ''"
+            <v-btn v-if="edit" @click="showComments = true"
               >Comment&nbsp;
-              <v-icon>mdi-message-text</v-icon>
+              <v-icon v-if="dlgData.comments.length == 0">mdi-message-text</v-icon>
+              <v-badge color="red" :content="dlgData.comments.length" v-if="dlgData.comments.length != 0">
+                <v-icon>mdi-message-text</v-icon>
+              </v-badge>
               <v-tooltip activator="parent" location="bottom">
                 {{ dlgData.comment }}
               </v-tooltip>
             </v-btn>
+            <v-dialog v-model="showComments" style="max-width: 800px">
+              <v-card>
+                <v-card-title>Comments</v-card-title>
+                <v-card-item>
+                  <v-data-iterator :items="dlgData.comments">
+                    <template v-slot:default="{ items }">
+                      <v-row v-for="(item, index) in items" dense>
+                        <v-text-field
+                          v-model="item.raw.comment"
+                          :label="item.raw.rejected ? item.raw.user_name + ' - Product owner' : item.raw.user_name"
+                          :class="{ 'reject': item.raw.rejected }">
+                        </v-text-field>
+                      </v-row>
+                    </template>
+                  </v-data-iterator>
+                </v-card-item>
+                <v-divider></v-divider>
+                <v-card-actions>
+                  <v-btn
+                    class="bg-deep-purple"
+                    style="margin: 0 0 20px 20px"
+                    variant="text"
+                    @click="addComment"
+                    type="submit"
+                    v-if="!isOwner && !isScrum && edit"
+                    >Add comment</v-btn
+                  >
+                  <v-spacer></v-spacer>
+                  <v-btn text="Close" variant="text" @click="showComments = false"></v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
           </v-col>
         </v-row>
       </v-card-title>
@@ -104,8 +139,8 @@
             variant="text"
             @click="completeStory"
             type="submit"
-            v-if="isOwner && edit && dlgData.sprint_id != null"
-            >Complete</v-btn
+            v-if="isOwner && edit && dlgData.sprint_id != null && dlgData.state != 'finished'"
+            >Accept</v-btn
           >
           <v-btn
             class="bg-deep-purple"
@@ -113,7 +148,7 @@
             variant="text"
             @click="rejectStory"
             type="submit"
-            v-if="isOwner && edit && dlgData.sprint_id != null"
+            v-if="isOwner && edit && dlgData.sprint_id != null && dlgData.state != 'finished'"
             >Reject</v-btn
           >
           <v-btn
@@ -168,7 +203,9 @@ export default defineComponent({
       work_value: null,
       time: null,
       tests: [{ id: 1, description: '# ', is_done: false }],
+      comments: [{ comment: '', user_name: '', rejected: false }],
       id: 0,
+      state: 'idle',
       comment: '',
     });
     const checkEmpty = [(value: string) => !!value || 'This field is required'];
@@ -182,6 +219,8 @@ export default defineComponent({
     const isOwner = ref(false);
     const dlgReject = ref<any>({});
     const sameName = ref(false);
+    const userId = ref('');
+    const showComments = ref(false);
 
     onMounted(() => {
       instance.value = getCurrentInstance();
@@ -210,17 +249,6 @@ export default defineComponent({
         sameName.value = true;
         return;
       }
-      // let properSprint = false;
-      // sprints.value.forEach((sprint) => {
-      //   if (sprint.id === dlgData.value.sprint_id) {  //sprint value se ne sme inicializirati pri ustvarjanju
-      //     if (sprint.project_id === currentProjectId.value){
-      //       properSprint = true;
-      //    }
-      //   }
-      // });
-      // if (!properSprint) {
-      //   return;
-      // }
       let editTests = [];
       let newTests = [];
       let storyId = 1;
@@ -344,11 +372,6 @@ export default defineComponent({
       dlgData.value.tests.push({ description: '# ', is_done: false });
     }
 
-    // function updateItem(item: any, index: number){
-    //   dlgData.value.tests[index] = item.raw.txt;
-    //   console.log(dlgData.value.tests);
-    // }
-
     async function completeStory() {
       console.log(dlgData.value.tests);
       if (dlgData.value.tests.every((item: any) => item.is_done)) {
@@ -367,8 +390,17 @@ export default defineComponent({
     }
 
     function rejectStory() {
-      dlgReject.value.show = true;
+      dlgReject.value.reject = true;
+      dlgReject.value.userId = userId.value;
       dlgReject.value.storyId = dlgData.value.id;
+      dlgReject.value.show = true;
+    }
+
+    function addComment() {
+      dlgReject.value.reject = false;
+      dlgReject.value.userId = userId.value;
+      dlgReject.value.storyId = dlgData.value.id;
+      dlgReject.value.show = true;
     }
 
     return {
@@ -390,7 +422,16 @@ export default defineComponent({
       rejectStory,
       fetchStories,
       dlgReject,
+      userId,
+      showComments,
+      addComment
     };
   },
 });
 </script>
+
+<style scoped>
+.reject {
+  background-color: #dd5555;
+}
+</style>
