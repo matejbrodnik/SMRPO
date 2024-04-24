@@ -542,16 +542,8 @@ const currentSubtask = ref({
 
 function openLogTimeDialog(item: any) {
   showLogTimeDialog.value = true;
-  // todo:
-  /*
-  check if there is active session
-  set activeSessionExists to true if there is active session
-  filter sessions for this user and this subtask 
-  fill table to show logged time
-  sorted by time
-  */
-  // console.log(item);
-  // console.log(item.id);
+  activeSessionExists.value = false;
+ 
   currentSubtask.value.id = item.id;
   currentSubtask.value.developer_id = item.assigned_developer_id;
   currentSubtask.value.user_story_id = item.user_story_id;  // filter userstory.loggedTimes for this subtask
