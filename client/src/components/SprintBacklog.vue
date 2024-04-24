@@ -131,9 +131,37 @@
                 </v-dialog>
 
 
-                <v-dialog v-model="showLogTimeDialog" class="dlgWindow" width="50%" >
+                <v-dialog v-model="showLogTimeDialog" class="dlgWindow" width="50%">
                   <v-card>
                     <v-card-title>Log time</v-card-title>
+                    <v-table v-if="timelogs.length > 0">
+                      <thead>
+                        <tr>
+                          <th>Start time</th>
+                          <th>Duration</th>
+
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        <tr v-for="timelog in timelogs" :key="timelog.id">
+                          <template v-if="!timelog.is_active">
+                            <td>{{ formatDate(timelog.start_time) }}</td>
+                            <td>{{ parseFloat(timelog.duration.toFixed(2)) }}</td>
+                            <td>
+                             
+                                <v-btn class="bg-deep-purple" size="30" @click="editTimelogDuration(timelog)">
+                                  <v-icon size="medium20">mdi-pencil</v-icon>
+                                </v-btn>
+                            
+                            </td>
+                          </template>
+                        </tr>
+                      </tbody>
+                    </v-table>
+
+
+
                     <v-card-actions>
                       <v-btn color="green" v-if="!activeSessionExists" @click="startSession()">
                         Start session
@@ -143,6 +171,19 @@
                       </v-btn>
                     </v-card-actions>
 
+                  </v-card>
+                  
+                </v-dialog>
+                <v-dialog v-model="editTimelog"  class="dlgWindow" width="30%">
+                  <v-card>
+                    <v-card-title>Edit timelog duration</v-card-title>
+                    <v-text-field v-model="currentTimelog.duration" label="Duration"></v-text-field>
+
+                    <v-text-field v-model="estimatedSubtaskTime" label="Estimated subtask time"></v-text-field>
+                    <v-card-actions>
+                      <v-btn color="blue" @click="closeEditTimelog()">Close</v-btn>
+                      <v-btn color="green" @click="saveTimelog()">Save</v-btn>
+                    </v-card-actions>
                   </v-card>
                 </v-dialog>
               </div>
@@ -165,6 +206,7 @@ import { onMounted, ref, watch } from 'vue';
 import { formatDate } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
 import { de } from 'vuetify/locale';
+import { parse } from 'vue/compiler-sfc';
 
 const user_profile_id = ref('');
 
@@ -199,6 +241,16 @@ const currentSprint = ref({
 const noActiveSprint = ref(false);
 const hasNoUserStories = ref(false);
 const userStories = ref<any[]>([]);
+
+const timelogs = ref<any[]>([]);
+const editTimelog = ref(false);
+const currentTimelog = ref({
+  id: '',
+  start_time: '',
+  duration: '',
+  subtask_id: '',
+});
+const estimatedSubtaskTime = ref(0);
 
 const showDialog = ref(false);
 const showLogTimeDialog = ref(false);
@@ -358,12 +410,12 @@ async function getSubtasks(userStory: any) {
   } else {
     userStory.subtasks = data;
     const timeSum = ref(0);
-    
+
     for (const subtask of userStory.subtasks) {
 
       const loggedTimeSum = ref(0);
 
-      
+
       for (const index in userStory.loggedTimes) {
 
         var timelog = userStory.loggedTimes.at(index)
@@ -512,7 +564,7 @@ async function rejectSubtask(subtask: any) {
 }
 
 async function getLoggedTimes(userStory: any) {
-  const { data, error } = await supabase 
+  const { data, error } = await supabase
     .from('subtask_timelog')
     .select('*')
     .eq('user_story', userStory.id);
@@ -545,24 +597,26 @@ const currentSubtask = ref({
 function openLogTimeDialog(item: any) {
   showLogTimeDialog.value = true;
   activeSessionExists.value = false;
- 
+
   currentSubtask.value.id = item.id;
   currentSubtask.value.developer_id = item.assigned_developer_id;
   currentSubtask.value.user_story_id = item.user_story_id;  // filter userstory.loggedTimes for this subtask
   for (const story of userStories.value) {
     if (story.id === item.user_story_id) {
       console.log(story.loggedTimes);
-      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === item.id && log.user_id === item.assigned_developer_id); 
+      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === item.id && log.user_id === item.assigned_developer_id);
       break;
     }
   }
+  timelogs.value = subtaskTimeLogs;
   console.log(subtaskTimeLogs);
   for (const timelog of subtaskTimeLogs) {
     if (timelog.is_active) {
       activeSessionExists.value = true;
       break;
+    }
   }
-}
+  estimatedSubtaskTime.value = item.estimated_time;
 }
 
 const closeLogTimeDialog = () => {
@@ -607,7 +661,7 @@ async function endSession() {
 
   for (const story of userStories.value) {
     if (story.id === currentSubtask.value.user_story_id) {
-      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === currentSubtask.value.id && log.user_id === currentSubtask.value.developer_id); 
+      var subtaskTimeLogs = story.loggedTimes.filter((log: any) => log.subtask_id === currentSubtask.value.id && log.user_id === currentSubtask.value.developer_id);
       break;
     }
   }
@@ -648,7 +702,7 @@ async function endSession() {
       console.log('Session deleted');
     }
 
-    const {error} = await supabase.from('subtask_timelog').update([
+    const { error } = await supabase.from('subtask_timelog').update([
       {
         duration: duration,
         is_active: false,
@@ -662,7 +716,7 @@ async function endSession() {
       closeLogTimeDialog();
     }
   } else {
-    const {error} = await supabase.from('subtask_timelog').update([
+    const { error } = await supabase.from('subtask_timelog').update([
       {
         duration: duration,
         is_active: false,
@@ -677,7 +731,7 @@ async function endSession() {
     }
   }
 
-  
+
   closeLogTimeDialog();
 
   await getUserStories();
@@ -685,20 +739,82 @@ async function endSession() {
 
 }
 
+const editTimelogDuration = (item) => {
+  currentTimelog.value.id = item.id;
+  currentTimelog.value.duration = item.duration;
+  currentTimelog.value.subtask_id = item.subtask_id;
+  // console.log(item);
+  editTimelog.value = true;
+}
+
+const closeEditTimelog = () => {
+  editTimelog.value = false;
+  currentTimelog.value = {
+    id: '',
+    start_time: '',
+    duration: '',
+    subtask_id: '',
+  }
+}
+
+async function saveTimelog() {
+
+
+  if (parseFloat(currentTimelog.value.duration) < 0) {
+    console.log('Duration cannot be negative');
+    return;
+  }
+  if (parseFloat(currentTimelog.value.duration) > 20) {
+    console.log('Duration cannot be more than 20 hours');
+    return;
+  }
+
+  const { error } = await supabase.from('subtask_timelog').update([
+    {
+      duration: currentTimelog.value.duration,
+    }
+  ]).eq('id', currentTimelog.value.id);
+  if (error) {
+    console.log('error saving timelog');
+    console.log(error);
+  } else {
+    console.log('Timelog saved');
+
+    // update subtask estimated time 
+
+    const { error: subtaskError } = await supabase.from('subtasks').update([
+      {
+        estimated_time: estimatedSubtaskTime.value,
+      }
+    ]).eq('id', currentTimelog.value.subtask_id);
+    if (subtaskError) {
+      console.log('error updating subtask');
+      console.log(subtaskError);
+    } else {
+      console.log('Subtask updated');
+    }
+
+    closeEditTimelog();
+    closeLogTimeDialog();
+    await getUserStories();
+  }
+}
+
+
 function areSameDate(date1: Date, date2: Date) {
-    return date1.getFullYear() === date2.getFullYear() &&
-           date1.getMonth() === date2.getMonth() &&
-           date1.getDate() === date2.getDate();
+  return date1.getFullYear() === date2.getFullYear() &&
+    date1.getMonth() === date2.getMonth() &&
+    date1.getDate() === date2.getDate();
 }
 
 function getDifferenceInHours(date1, date2) {
-    // Difference in milliseconds
-    const difference = date2 - date1;
+  // Difference in milliseconds
+  const difference = date2 - date1;
 
-    // Convert milliseconds to hours
-    const hours = difference / (1000 * 60 * 60);
+  // Convert milliseconds to hours
+  const hours = difference / (1000 * 60 * 60);
 
-    return hours;
+  return hours;
 }
 
 </script>
