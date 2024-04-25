@@ -47,7 +47,7 @@
                         <th>Assigned developer</th>
                         <th>Logged time [h]</th>
                         <th>Remaining time [h]</th>
-                        <th>Estimated time [h]</th>
+                        <!-- <th>Estimated time [h]</th> -->
                         <th></th>
                         <th></th>
                       </tr>
@@ -72,11 +72,11 @@
                           {{ subtask.loggedTimeSum }}
                         </td>
                         <td>
-                          {{ subtask.remainingTime }}
+                          {{ subtask.remaining_time }}
                         </td>
-                        <td>
+                        <!-- <td>
                           {{ subtask.estimated_time }}
-                        </td>
+                        </td> -->
                         <td>
                           <v-btn color="green" v-if="checkTaskCanBeAccepted && !subtask.assigned_developer_id"
                             @click="acceptSubtask(subtask)">Accept</v-btn>
@@ -100,8 +100,8 @@
                         <td></td>
                         <td></td>
                         <td>Total logged time: {{ userStories[index].loggedTimeSum }}</td>
-                        <td></td>
-                        <td>Estimated time sum: {{ userStories[index].timeSum }} h</td>
+                        <td> Total remaining time: {{ userStories[index].timeSum }} </td>
+                        <!-- <td>Estimated time sum: {{ userStories[index].timeSum }} h</td> -->
                       </tr>
                     </tbody>
                   </v-table>
@@ -138,7 +138,7 @@
                       <thead>
                         <tr>
                           <th>Start time</th>
-                          <th>Duration</th>
+                          <th>Duration [h]</th>
 
                         </tr>
                       </thead>
@@ -176,10 +176,10 @@
                 </v-dialog>
                 <v-dialog v-model="editTimelog"  class="dlgWindow" width="30%">
                   <v-card>
-                    <v-card-title>Edit timelog duration</v-card-title>
+                    <v-card-title>Edit timelog duration [h]</v-card-title>
                     <v-text-field v-model="currentTimelog.duration" label="Duration"></v-text-field>
 
-                    <v-text-field v-model="estimatedSubtaskTime" label="Estimated subtask time"></v-text-field>
+                    <v-text-field v-model="estimatedSubtaskTime" label="Estimated remaining subtask time"></v-text-field>
                     <v-card-actions>
                       <v-btn color="blue" @click="closeEditTimelog()">Close</v-btn>
                       <v-btn color="green" @click="saveTimelog()">Save</v-btn>
@@ -205,8 +205,7 @@
 import { onMounted, ref, watch } from 'vue';
 import { formatDate } from '../lib/dateFormatter';
 import { supabase } from '../lib/supabaseClient';
-import { de } from 'vuetify/locale';
-import { parse } from 'vue/compiler-sfc';
+
 
 const user_profile_id = ref('');
 
@@ -403,7 +402,7 @@ async function getUserStories() {
 async function getSubtasks(userStory: any) {
   const { data, error } = await supabase
     .from('subtasks')
-    .select('id, description, estimated_time, developer_id, is_done, assigned_developer_id, user_story_id')
+    .select('id, description, estimated_time, remaining_time, developer_id, is_done, assigned_developer_id, user_story_id')
     .eq('user_story_id', userStory.id);
   if (error) {
     console.error('Error fetching subtasks');
@@ -445,11 +444,11 @@ async function getSubtasks(userStory: any) {
         subtask.developer = developer.name + ' ' + developer.surname;
       }
 
-      subtask.estimated_time = parseFloat(subtask.estimated_time.toFixed(1));
+      subtask.remaining_time = parseFloat(subtask.remaining_time.toFixed(1));
 
-      timeSum.value += subtask.estimated_time;
+      timeSum.value += subtask.remaining_time;
 
-      subtask.remainingTime = subtask.estimated_time - subtask.loggedTimeSum;
+      // subtask.remainingTime = subtask.estimated_time - subtask.loggedTimeSum;
     }
     userStory.timeSum = timeSum.value;
   }
@@ -495,6 +494,7 @@ async function createSubtask() {
       user_story_id: subtaskPayload.user_story_id,
       description: subtaskPayload.description,
       estimated_time: subtaskPayload.estimated_time,
+      remaining_time: subtaskPayload.estimated_time,
       developer_id: subtaskPayload.developer_id,
       is_done: subtaskPayload.is_done,
     },
@@ -594,7 +594,7 @@ const currentSubtask = ref({
   user_story_id: '',
 });
 
-function openLogTimeDialog(item: any) {
+async function openLogTimeDialog(item: any) {
   showLogTimeDialog.value = true;
   activeSessionExists.value = false;
 
@@ -608,16 +608,63 @@ function openLogTimeDialog(item: any) {
       break;
     }
   }
-  timelogs.value = subtaskTimeLogs;
-  console.log(subtaskTimeLogs);
+
+  // here if len of subtaskTimeLogs is nil we need to create them and await 
+  if (subtaskTimeLogs.length === 0) {
+    await createTimelogsForSubtask(item);
+    await getUserStories();
+    showLogTimeDialog.value = false;
+    return;
+  }
+
   for (const timelog of subtaskTimeLogs) {
     if (timelog.is_active) {
       activeSessionExists.value = true;
       break;
     }
   }
-  estimatedSubtaskTime.value = item.estimated_time;
+
+  var today = new Date();
+
+  subtaskTimeLogs = subtaskTimeLogs.filter((log: any) => new Date(log.start_time) <= today && log.is_active != true);
+
+  timelogs.value = subtaskTimeLogs;
+
+
+  estimatedSubtaskTime.value = item.remaining_time;
 }
+
+async function createTimelogsForSubtask(item: any) {
+  var start_date = new Date(currentSprint.value.start_date);
+  var end_date = new Date(currentSprint.value.end_date);
+
+  var timelogs = [];
+
+  for (let date = new Date(start_date); date <= end_date; date.setDate(date.getDate() + 1)) {
+        // Format date or perform operations
+        console.log(date.toISOString().substring(0, 20));  
+
+        var newTimelog = {
+          subtask_id: item.id,
+          user_id: item.assigned_developer_id,
+          user_story: item.user_story_id,
+          start_time: date.toUTCString(),
+          duration: 0,
+          is_active: false,
+        }
+
+        timelogs.push(newTimelog);
+    }
+
+    const { error } = await supabase.from('subtask_timelog').insert(timelogs);
+    if (error) {
+      console.log('error creating timelogs');
+      console.log(error);
+    } else {
+      console.log('Timelogs created');
+    }
+}
+
 
 const closeLogTimeDialog = () => {
   showLogTimeDialog.value = false;
@@ -784,7 +831,7 @@ async function saveTimelog() {
 
     const { error: subtaskError } = await supabase.from('subtasks').update([
       {
-        estimated_time: estimatedSubtaskTime.value,
+        remaining_time: estimatedSubtaskTime.value,
       }
     ]).eq('id', currentTimelog.value.subtask_id);
     if (subtaskError) {
