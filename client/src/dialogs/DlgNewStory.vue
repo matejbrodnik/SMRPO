@@ -12,7 +12,7 @@
             </p>
           </v-col>
           <v-col cols="2">
-            <v-btn v-if="edit" @click="showComments = true"
+            <v-btn v-if="edit" @click="showComments = true; console.log(dlgData.comments)"
               >Comment&nbsp;
               <v-icon v-if="dlgData.comments.length == 0">mdi-message-text</v-icon>
               <v-badge color="red" :content="dlgData.comments.length" v-if="dlgData.comments.length != 0">
@@ -26,17 +26,14 @@
               <v-card>
                 <v-card-title>Comments</v-card-title>
                 <v-card-item>
-                  <v-data-iterator :items="dlgData.comments">
-                    <template v-slot:default="{ items }">
-                      <v-row v-for="(item, index) in items" dense>
-                        <v-text-field
-                          v-model="item.raw.comment"
-                          :label="item.raw.rejected ? item.raw.user_name + ' - Product owner' : item.raw.user_name"
-                          :class="{ 'reject': item.raw.rejected }">
-                        </v-text-field>
-                      </v-row>
-                    </template>
-                  </v-data-iterator>
+                    <v-data-iterator :items="dlgData.comments" :items-per-page="10">
+                      <template v-slot:default="{ items }">
+                        <v-row v-for="(item, index) in items" dense>
+                          <v-card :subtitle="item.raw.rejected ? item.raw.user_name + ' - Product owner' : item.raw.user_name" :text="item.raw.comment" style="white-space: pre-wrap;">
+                          </v-card>
+                        </v-row>
+                      </template>
+                    </v-data-iterator>
                 </v-card-item>
                 <v-divider></v-divider>
                 <v-card-actions>
@@ -59,6 +56,7 @@
       </v-card-title>
       <v-form @submit.prevent>
         <v-alert v-if="sameName" type="error"> Story cannot have a duplicate name. </v-alert>
+        <v-alert v-if="!storyReady" type="error"> Story must first complete all subtasks/tests. </v-alert>
         <v-card-text>
           <v-row dense>
             <v-col cols="7">
@@ -219,6 +217,7 @@ export default defineComponent({
     const isOwner = ref(false);
     const dlgReject = ref<any>({});
     const sameName = ref(false);
+    const storyReady = ref(true);
     const userId = ref('');
     const showComments = ref(false);
 
@@ -373,8 +372,13 @@ export default defineComponent({
     }
 
     async function completeStory() {
-      console.log(dlgData.value.tests);
-      if (dlgData.value.tests.every((item: any) => item.is_done)) {
+      const { data, error } = await supabase
+        .from('subtasks')
+        .select('is_done')
+        .eq('user_story_id', dlgData.value.id);
+      if (error) throw error;
+      storyReady.value = dlgData.value.tests.every((item: any) => item.is_done) && data.every(v => v.is_done)
+      if (storyReady.value) {
         const { error } = await supabase
           .from('user_story')
           .update([
@@ -389,7 +393,7 @@ export default defineComponent({
       }
     }
 
-    function rejectStory() {
+    async function rejectStory() {
       dlgReject.value.reject = true;
       dlgReject.value.userId = userId.value;
       dlgReject.value.storyId = dlgData.value.id;
@@ -424,7 +428,8 @@ export default defineComponent({
       dlgReject,
       userId,
       showComments,
-      addComment
+      addComment,
+      storyReady
     };
   },
 });

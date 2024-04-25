@@ -65,7 +65,7 @@ export default defineComponent({
           },
         ]);
       
-      if (error) throw error1;
+      if (error1) throw error1;
       props.parentMethod?.();
       show.value = false;
     }
