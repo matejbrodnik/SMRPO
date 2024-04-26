@@ -255,6 +255,8 @@ export default defineComponent({
         return;
       }
 
+      dlgEditStory.value.storyReady = true;
+      dlgEditStory.value.sameName = false;
       dlgEditStory.value.isScrum = isScrum.value;
       dlgEditStory.value.isOwner = isOwner.value;
       dlgEditStory.value.dlgData = item.raw;
