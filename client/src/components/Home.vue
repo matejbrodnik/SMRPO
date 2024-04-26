@@ -96,12 +96,12 @@ const profileDlg = ref(false);
 const isProductOwner = ref(false);
 const lastLogin = ref('');
 const isDone = ref(false);
+let user = await (await supabase.auth.getUser()).data.user;
 
 const showDialog = () => {
   profileDlg.value = true;
 };
 
-const user = await (await supabase.auth.getUser()).data.user;
 
 async function getProjectRole() {
   const { data } = await supabase
@@ -141,6 +141,7 @@ export default {
   },
 
   async mounted() {
+    user = await (await supabase.auth.getUser()).data.user;
     this.userName = await getUserName();
     await getProjectRole();
     isDone.value = true;
